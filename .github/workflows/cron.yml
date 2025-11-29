@@ -1,0 +1,17 @@
+name: Trigger AI News Pipeline
+
+on:
+  schedule:
+    - cron: "0 * * * *" # Runs every hour
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  trigger-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call API Endpoint
+        run: |
+          curl -X POST ${{ secrets.NEXT_PUBLIC_CONVEX_URL }}/../api/run-job \
+          -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+          -H "Content-Type: application/json" \
+          -d '{"topic": "Artificial Intelligence News"}'

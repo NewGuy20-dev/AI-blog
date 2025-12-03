@@ -1,27 +1,27 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
-import { searchNews, discoverTopic } from "./search";
+import { searchNews } from "./search";
 import { generateArticle } from "./generator";
 import { verifyArticle } from "./verifier";
+import { extractTopicFromTavily } from "../extractTopicFromTavily";
 import { v4 as uuidv4 } from "uuid";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-export async function runPipeline(topic?: string) {
+export async function runPipeline() {
     const runId = uuidv4();
-    const start = Date.now();
 
     try {
-        // 0. Discover topic if not provided
-        let actualTopic = topic;
-        if (!actualTopic) {
-            await log(runId, "discovery", "started");
-            actualTopic = await discoverTopic();
-            await log(runId, "discovery", "success", undefined, { topic: actualTopic });
-        }
-        // 1. Search
+        // 0. Discover topic dynamically via Tavily
+        await log(runId, "discovery", "started");
+        const { topic: actualTopic, results: tavilyResults } = await extractTopicFromTavily();
+        await log(runId, "discovery", "success", undefined, { topic: actualTopic });
+
+        // 1. Search for more context if needed
         await log(runId, "search", "started", { topic: actualTopic });
-        const searchResults = await searchNews(actualTopic);
+        const searchResults = tavilyResults.length > 0 
+            ? tavilyResults.map(r => ({ ...r, publishedDate: undefined }))
+            : await searchNews(actualTopic);
         await log(runId, "search", "success", { topic: actualTopic }, searchResults);
 
         // 2. Generate
@@ -53,11 +53,11 @@ export async function runPipeline(topic?: string) {
             await log(runId, "save", "skipped", { reason: "Verification failed" });
         }
 
-        return { success: true, runId };
+        return { success: true, runId, topic: actualTopic };
     } catch (error: any) {
         console.error("Pipeline failed:", error);
         await log(runId, "error", "failed", { error: error.message });
-        return { success: false, error: error.message, runId };
+        return { success: false, error: error.message, runId, topic: undefined };
     }
 }
 

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test-cron": "npx tsx scripts/test-cron.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.44",

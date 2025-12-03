@@ -3,35 +3,46 @@ import { runPipeline } from "@/lib/ai/pipeline";
 
 export const maxDuration = 60;
 
-export async function GET(req: Request) {
+function checkAuth(req: Request): boolean {
     const authHeader = req.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return authHeader === `Bearer ${process.env.CRON_SECRET}`;
+}
+
+export async function GET(req: Request) {
+    if (!checkAuth(req)) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const topic = searchParams.get("topic");
-
     try {
-        const result = await runPipeline(topic || undefined);
-        return NextResponse.json(result);
+        const result = await runPipeline();
+        return NextResponse.json({
+            status: "ok",
+            source: "gemini+tavily",
+            timestamp: new Date().toISOString(),
+            ...result,
+        });
     } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ status: "error", error: error.message, timestamp: new Date().toISOString() }, { status: 500 });
     }
 }
 
 export async function POST(req: Request) {
-    const authHeader = req.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    if (!checkAuth(req)) {
         return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const { topic } = await req.json().catch(() => ({}));
+    // Ignore any topic from body - always discover dynamically
+    await req.json().catch(() => ({}));
 
     try {
-        const result = await runPipeline(topic);
-        return NextResponse.json(result);
+        const result = await runPipeline();
+        return NextResponse.json({
+            status: "ok",
+            source: "gemini+tavily",
+            timestamp: new Date().toISOString(),
+            ...result,
+        });
     } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ status: "error", error: error.message, timestamp: new Date().toISOString() }, { status: 500 });
     }
 }

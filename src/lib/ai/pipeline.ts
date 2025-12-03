@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
-import { searchNews } from "./search";
+import { searchNews, discoverTopic } from "./search";
 import { generateArticle } from "./generator";
 import { verifyArticle } from "./verifier";
 import { v4 as uuidv4 } from "uuid";
@@ -10,9 +10,15 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 export async function runPipeline(topic?: string) {
     const runId = uuidv4();
     const start = Date.now();
-    const actualTopic = topic || "Artificial Intelligence News"; // Default or fetch trending
 
     try {
+        // 0. Discover topic if not provided
+        let actualTopic = topic;
+        if (!actualTopic) {
+            await log(runId, "discovery", "started");
+            actualTopic = await discoverTopic();
+            await log(runId, "discovery", "success", undefined, { topic: actualTopic });
+        }
         // 1. Search
         await log(runId, "search", "started", { topic: actualTopic });
         const searchResults = await searchNews(actualTopic);

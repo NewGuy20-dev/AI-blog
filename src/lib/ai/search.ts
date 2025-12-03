@@ -1,8 +1,31 @@
+import { generateText } from "ai";
+import { model } from "./config";
+
 export interface SearchResult {
     title: string;
     url: string;
     content: string;
     publishedDate?: string;
+}
+
+export async function discoverTopic(): Promise<string> {
+    const results = await searchNews("top artificial intelligence news today");
+    
+    const articles = results.map(r => 
+        `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`
+    ).join("\n\n---\n\n");
+    
+    const { text } = await generateText({
+        model,
+        prompt: `Analyze these AI news articles and identify the single most significant, newsworthy topic that would make a compelling blog post.
+
+Articles:
+${articles}
+
+Based on your analysis of the article content, return ONLY a specific topic phrase (5-15 words) that captures the most important story. Nothing else.`,
+    });
+    
+    return text.trim();
 }
 
 export async function searchNews(topic: string): Promise<SearchResult[]> {

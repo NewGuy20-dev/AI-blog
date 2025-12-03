@@ -10,10 +10,17 @@ export async function generateArticle(topic: string, searchResults: SearchResult
 
     const prompt = `
 You are an objective news reporter. Write a structured news article about "${topic}" based ONLY on the provided context.
-Do not hallucinate. Use the provided sources.
-Structure the content with paragraphs and headings.
-Include a summary and tags.
-Ensure the tone is neutral and journalistic.
+
+Requirements:
+- title: A compelling headline
+- slug: URL-friendly version of title (lowercase, hyphens, no special chars)
+- summary: 1-2 sentence summary
+- content: Array of content blocks, each must have "type" field:
+  - {"type": "heading", "level": 1 or 2, "text": "..."}
+  - {"type": "paragraph", "text": "..."}
+- sources: Array of {"title": "...", "url": "..."} from the context
+- tags: Array of relevant topic tags
+- readingTime: Estimated minutes to read
 
 Context:
 ${context}

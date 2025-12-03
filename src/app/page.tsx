@@ -3,62 +3,59 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { ArticleCard } from "@/components/ui/ArticleCard";
+import { Header } from "@/components/ui/Header";
 
 export default function Home() {
   const posts = useQuery(api.posts.list, { limit: 20 });
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            AI<span className="text-indigo-600">News</span>
+    <div className="min-h-screen bg-slate-50">
+      <Header />
+      
+      {/* Hero */}
+      <section className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-16 text-center">
+          <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-sm font-medium px-4 py-2 rounded-full mb-6">
+            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            Live updates every hour
+          </div>
+          <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 mb-4 tracking-tight">
+            AI <span className="gradient-text">News</span>
           </h1>
-          <nav>
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-gray-600 hover:text-indigo-600"
-            >
-              GitHub
-            </a>
-          </nav>
-        </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="mb-12 text-center">
-          <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
-            Latest AI Updates
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Autonomous newsroom powered by Gemini 2.5 Flash Lite.
-            Generating factual, verified updates every hour.
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            Autonomous newsroom powered by AI. Curated, verified, and delivered fresh.
           </p>
         </div>
+      </section>
 
+      {/* Articles */}
+      <main className="max-w-6xl mx-auto px-4 py-12">
         {posts === undefined ? (
-          <div className="space-y-6">
-            {[...Array(3)].map((_, i) => (
-              <div
-                key={i}
-                className="h-48 bg-white rounded-xl border border-gray-200 animate-pulse"
-              />
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-72 bg-white rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No posts yet. Trigger the pipeline!</p>
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">📰</div>
+            <p className="text-slate-500 text-lg">No articles yet. First batch coming soon!</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-1">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {posts.map((post: any) => (
               <ArticleCard key={post._id} post={post} />
             ))}
           </div>
         )}
-      </div>
-    </main>
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-8 text-center text-sm text-slate-500">
+          Built with Next.js, Convex & Gemini · Auto-generated content
+        </div>
+      </footer>
+    </div>
   );
 }

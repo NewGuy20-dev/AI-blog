@@ -5,3 +5,10 @@ export const google = createGoogleGenerativeAI({
 });
 
 export const model = google("gemini-2.5-flash-lite");
+
+// Critic model uses separate API key for independent validation
+const googleCritic = createGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_CRITIC_API_KEY,
+});
+
+export const criticModel = googleCritic("gemini-2.5-flash-lite");

@@ -2,7 +2,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../convex/_generated/api";
 import { searchNews } from "./search";
 import { generateArticle } from "./generator";
-import { verifyArticle } from "./verifier";
+import { critiqueArticle } from "./critic";
 import { extractTopicFromTavily } from "../extractTopicFromTavily";
 import { v4 as uuidv4 } from "uuid";
 
@@ -29,14 +29,19 @@ export async function runPipeline() {
         const draft = await generateArticle(actualTopic, searchResults);
         await log(runId, "generate", "success", { topic: actualTopic }, draft);
 
-        // 3. Verify
-        await log(runId, "verify", "started", { draftTitle: draft.title });
-        const verification = await verifyArticle(draft, searchResults);
-        await log(runId, "verify", "success", { issues: verification.issues }, verification.correctedArticle);
+        // 3. Critique (replaces verify)
+        await log(runId, "critique", "started", { draftTitle: draft.title });
+        const critique = await critiqueArticle(draft, actualTopic, searchResults);
+        await log(runId, "critique", "success", {
+            issues: critique.issues_found,
+            improvements: critique.improvements_made,
+            confidence: critique.confidence_score,
+            pass: critique.pass,
+        });
 
-        // 4. Save
-        if (verification.pass || verification.correctedArticle) {
-            const finalArticle = verification.correctedArticle || draft;
+        // 4. Save if passes
+        if (critique.pass) {
+            const finalArticle = critique.final_article;
             await convex.mutation(api.posts.create, {
                 slug: finalArticle.slug,
                 title: finalArticle.title,
@@ -50,7 +55,7 @@ export async function runPipeline() {
             });
             await log(runId, "save", "success", { slug: finalArticle.slug });
         } else {
-            await log(runId, "save", "skipped", { reason: "Verification failed" });
+            await log(runId, "save", "skipped", { reason: "Critique failed", confidence: critique.confidence_score });
         }
 
         return { success: true, runId, topic: actualTopic };
@@ -69,7 +74,7 @@ async function log(runId: string, stage: string, status: string, input?: any, ou
             status,
             input: input ? JSON.stringify(input) : undefined,
             output: output ? JSON.stringify(output) : undefined,
-            durationMs: 0, // TODO: Track duration
+            durationMs: 0,
         });
     } catch (e) {
         console.error("Failed to log audit:", e);

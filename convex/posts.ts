@@ -52,3 +52,14 @@ export const list = query({
             .take(args.limit ?? 20);
     },
 });
+
+export const getRecentTitles = query({
+    args: { limit: v.optional(v.number()) },
+    handler: async (ctx, args) => {
+        const posts = await ctx.db
+            .query("posts")
+            .order("desc")
+            .take(args.limit ?? 10);
+        return posts.map((p) => p.title);
+    },
+});

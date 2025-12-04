@@ -6,8 +6,8 @@ export const log = mutation({
         runId: v.string(),
         stage: v.string(),
         status: v.string(),
-        input: v.any(),
-        output: v.any(),
+        input: v.optional(v.any()),
+        output: v.optional(v.any()),
         durationMs: v.number(),
     },
     handler: async (ctx, args) => {

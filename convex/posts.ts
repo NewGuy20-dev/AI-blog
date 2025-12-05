@@ -63,3 +63,18 @@ export const getRecentTitles = query({
         return posts.map((p) => p.title);
     },
 });
+
+export const getRelated = query({
+    args: { slug: v.string(), tags: v.array(v.string()), limit: v.optional(v.number()) },
+    handler: async (ctx, args) => {
+        const posts = await ctx.db.query("posts").order("desc").take(50);
+        const related = posts
+            .filter((p) => p.slug !== args.slug && p.tags.some((t) => args.tags.includes(t)))
+            .slice(0, args.limit ?? 3);
+        if (related.length < (args.limit ?? 3)) {
+            const fallback = posts.filter((p) => p.slug !== args.slug && !related.includes(p));
+            return [...related, ...fallback].slice(0, args.limit ?? 3);
+        }
+        return related;
+    },
+});

@@ -10,6 +10,7 @@
 
 import type * as audit from "../audit.js";
 import type * as posts from "../posts.js";
+import type * as subscribers from "../subscribers.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +21,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   audit: typeof audit;
   posts: typeof posts;
+  subscribers: typeof subscribers;
 }>;
 
 /**

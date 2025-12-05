@@ -3,6 +3,7 @@ import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import ConvexClientProvider from "./ConvexClientProvider";
 import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
+import { ThemeProvider } from "@/lib/ThemeProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -40,12 +41,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${sourceSerif.variable} antialiased font-sans`}
       >
         <ServiceWorkerRegistration />
-        <ConvexClientProvider>{children}</ConvexClientProvider>
+        <ConvexClientProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   );

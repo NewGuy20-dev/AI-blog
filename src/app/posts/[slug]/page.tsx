@@ -7,6 +7,10 @@ import { Header } from "@/components/ui/Header";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ReadingProgress } from "@/components/ui/ReadingProgress";
+import { ShareButtons } from "@/components/ui/ShareButtons";
+import { RelatedArticles } from "@/components/ui/RelatedArticles";
+import { TableOfContents } from "@/components/ui/TableOfContents";
 
 export default function PostPage() {
   const params = useParams();
@@ -15,10 +19,10 @@ export default function PostPage() {
 
   if (post === undefined) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[var(--color-surface)]">
         <Header />
         <div className="flex items-center justify-center py-32">
-          <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -26,12 +30,12 @@ export default function PostPage() {
 
   if (post === null) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-[var(--color-surface)]">
         <Header />
         <div className="flex flex-col items-center justify-center py-32">
           <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Article not found</h1>
-          <Link href="/" className="text-indigo-600 hover:underline">
+          <h1 className="text-2xl font-bold mb-2">Article not found</h1>
+          <Link href="/" className="text-[var(--color-primary)] hover:underline">
             ← Back to home
           </Link>
         </div>
@@ -40,13 +44,14 @@ export default function PostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[var(--color-surface)]">
+      <ReadingProgress />
       <Header />
       
       <article className="max-w-3xl mx-auto px-4 py-12">
         <Link
           href="/"
-          className="inline-flex items-center text-sm text-slate-500 hover:text-indigo-600 mb-8 transition-colors"
+          className="inline-flex items-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] mb-8 transition-colors"
         >
           ← Back to feed
         </Link>
@@ -56,30 +61,35 @@ export default function PostPage() {
             {post.tags.map((tag: string) => (
               <span
                 key={tag}
-                className="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full"
+                className="text-sm font-medium text-[var(--color-primary)] bg-[var(--color-primary)]/10 px-3 py-1 rounded-full"
               >
                 {tag}
               </span>
             ))}
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-6 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
             {post.title}
           </h1>
-          <div className="flex items-center gap-4 text-sm text-slate-500 pb-8 border-b border-slate-200">
-            <time dateTime={new Date(post.publishedAt).toISOString()}>
-              {format(post.publishedAt, "MMMM d, yyyy")}
-            </time>
-            <span>·</span>
-            <span>{post.readingTime} min read</span>
+          <div className="flex items-center justify-between gap-4 text-sm text-[var(--color-text-muted)] pb-8 border-b border-[var(--color-border)]">
+            <div className="flex items-center gap-4">
+              <time dateTime={new Date(post.publishedAt).toISOString()}>
+                {format(post.publishedAt, "MMMM d, yyyy")}
+              </time>
+              <span>·</span>
+              <span>{post.readingTime} min read</span>
+            </div>
+            <ShareButtons title={post.title} slug={slug} />
           </div>
         </header>
 
-        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-sm border border-slate-200">
+        <TableOfContents content={post.content} />
+
+        <div className="bg-[var(--color-card)] rounded-2xl p-8 md:p-12 shadow-sm border border-[var(--color-border)]">
           <ArticleContent content={post.content} />
         </div>
 
-        <footer className="mt-12 p-6 bg-white rounded-2xl border border-slate-200">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4">
+        <footer className="mt-12 p-6 bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)]">
+          <h3 className="text-sm font-bold uppercase tracking-wider mb-4">
             Sources
           </h3>
           <ul className="space-y-2">
@@ -89,16 +99,18 @@ export default function PostPage() {
                   href={source.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                  className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors flex items-center gap-2"
                 >
-                  <span className="text-slate-400">{i + 1}.</span>
+                  <span className="opacity-50">{i + 1}.</span>
                   <span className="truncate">{source.title}</span>
-                  <span className="text-slate-300">↗</span>
+                  <span className="opacity-30">↗</span>
                 </a>
               </li>
             ))}
           </ul>
         </footer>
+
+        <RelatedArticles slug={slug} tags={post.tags} />
       </article>
     </div>
   );

@@ -10,8 +10,10 @@ interface ContentBlock {
 }
 
 export function ArticleContent({ content }: { content: ContentBlock[] }) {
+  let headingIndex = 0;
+
   return (
-    <div className="font-serif text-slate-800 text-lg leading-relaxed">
+    <div className="font-serif text-lg leading-relaxed">
       {content.map((block, index) => {
         switch (block.type) {
           case "heading": {
@@ -21,25 +23,27 @@ export function ArticleContent({ content }: { content: ContentBlock[] }) {
               2: "text-2xl",
               3: "text-xl",
             };
+            const id = `heading-${headingIndex++}`;
             return React.createElement(
               `h${level}`,
               {
                 key: index,
-                className: `font-sans font-bold text-slate-900 ${sizes[level] || "text-xl"} mt-10 mb-4`,
+                id,
+                className: `font-sans font-bold ${sizes[level] || "text-xl"} mt-10 mb-4 scroll-mt-20`,
               },
               block.text
             );
           }
           case "paragraph":
             return (
-              <p key={index} className="mb-6">
+              <p key={index} className="mb-6 text-[var(--color-text-muted)]">
                 {block.text}
               </p>
             );
           case "image":
             return (
               <figure key={index} className="my-10">
-                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-slate-100">
+                <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-[var(--color-border)]">
                   {block.url && (
                     <Image
                       src={block.url}
@@ -50,7 +54,7 @@ export function ArticleContent({ content }: { content: ContentBlock[] }) {
                   )}
                 </div>
                 {block.alt && (
-                  <figcaption className="mt-3 text-center text-sm text-slate-500 font-sans">
+                  <figcaption className="mt-3 text-center text-sm text-[var(--color-text-muted)] font-sans">
                     {block.alt}
                   </figcaption>
                 )}

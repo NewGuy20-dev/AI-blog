@@ -11,7 +11,7 @@ export default defineSchema({
     slug: v.string(),
     title: v.string(),
     summary: v.string(),
-    content: v.array(v.any()), // Structured content (Paragraphs, Headings) - using v.any() for flexibility with Zod validation on write
+    content: v.array(v.any()),
     sources: v.array(
       v.object({
         title: v.string(),
@@ -23,6 +23,11 @@ export default defineSchema({
     publishedAt: v.number(),
     readingTime: v.number(),
   }).index("by_slug", ["slug"]),
+
+  subscribers: defineTable({
+    email: v.string(),
+    subscribedAt: v.number(),
+  }).index("by_email", ["email"]),
 
   audit: defineTable({
     runId: v.string(),

@@ -12,3 +12,8 @@ const googleCritic = createGoogleGenerativeAI({
 });
 
 export const criticModel = googleCritic("gemini-2.5-flash-lite");
+
+export const refinementConfig = {
+  maxRetries: 2,
+  fallbackThreshold: 0.6,
+};

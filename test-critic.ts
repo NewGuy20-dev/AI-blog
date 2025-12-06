@@ -46,10 +46,13 @@ async function testCritic() {
         );
 
         console.log("✅ Critique Complete!\n");
-        console.log("Issues Found:", result.issues_found);
-        console.log("Improvements Made:", result.improvements_made);
+        console.log("Decision:", result.decision);
+        console.log("Issues Found:", result.issues.length);
+        console.log("High Severity:", result.high_severity_issues.length);
+        console.log("Fixable:", result.fixable_issues.length);
         console.log("Confidence Score:", result.confidence_score);
-        console.log("Pass:", result.pass);
+        console.log("\n📋 Issues:");
+        result.issues.forEach(i => console.log(`  - [${i.severity}] ${i.category}/${i.subcategory}: ${i.description}`));
         console.log("\n📄 Final Article:");
         console.log(JSON.stringify(result.final_article, null, 2));
     } catch (error) {

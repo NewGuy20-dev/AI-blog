@@ -3,87 +3,120 @@ import { z } from "zod";
 import { criticModel } from "./config";
 import { Article, ArticleSchema } from "../schemas/article";
 import { SearchResult } from "./search";
+import { CriticIssue, CriticIssueSchema, determineDecision, getFixableIssues, getHighSeverityIssues } from "./issues";
 
 const CriticResultSchema = z.object({
-    issues_found: z.array(z.string()),
-    improvements_made: z.array(z.string()),
-    final_article: ArticleSchema,
-    confidence_score: z.number().min(0).max(1),
+  issues: z.array(CriticIssueSchema),
+  confidence_score: z.number().min(0).max(1),
+  final_article: ArticleSchema,
 });
 
-export type CriticResult = z.infer<typeof CriticResultSchema> & { pass: boolean };
+export interface CriticResult {
+  issues: CriticIssue[];
+  decision: 'reject' | 'fix' | 'publish';
+  high_severity_issues: CriticIssue[];
+  fixable_issues: CriticIssue[];
+  confidence_score: number;
+  final_article: Article;
+}
 
 export async function critiqueArticle(
-    draft: Article,
-    topic: string,
-    searchResults: SearchResult[]
+  draft: Article,
+  topic: string,
+  searchResults: SearchResult[]
 ): Promise<CriticResult> {
-    const context = searchResults
-        .map((r) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`)
-        .join("\n\n");
+  const context = searchResults
+    .map((r) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`)
+    .join("\n\n");
 
-    const prompt = `You are an expert editorial critic. Review this AI-generated article and improve it.
+  const prompt = `You are a content compliance and quality reviewer. Analyze this article against ALL criteria below.
 
-ORIGINAL TOPIC: "${topic}"
+TOPIC: "${topic}"
 
-DRAFT ARTICLE:
+ARTICLE TO REVIEW:
 Title: ${draft.title}
 Summary: ${draft.summary}
 Content: ${JSON.stringify(draft.content, null, 2)}
 Sources: ${JSON.stringify(draft.sources)}
 Tags: ${draft.tags.join(", ")}
 
-SOURCE CONTEXT (use to verify facts):
+SOURCE CONTEXT (for fact-checking):
 ${context}
 
-PERFORM THESE CHECKS:
+═══════════════════════════════════════
+CHECK EACH CATEGORY:
+═══════════════════════════════════════
 
-1. FACTUAL ACCURACY
-- Cross-reference claims with the source context
-- Flag unsupported, speculative, or hallucinated claims
-- Fix any factual errors
+⚠️ SAFETY (HIGH severity = immediate rejection)
+□ violence - Violence or graphic content
+□ hate_speech - Hate speech or slurs
+□ extremism - Extremist ideology
+□ harassment - Harassment or targeting individuals
+□ sexual_content - Sexual/adult content
+□ illegal_activity - Illegal activity promotion
+□ weapons - Weapons instructions
+□ political_persuasion - Political persuasion/propaganda (MEDIUM)
+□ medical_legal_advice - Medical or legal advice
 
-2. TOPIC RELEVANCE
-- Ensure article matches the topic "${topic}"
-- Remove filler or irrelevant sections
-- Title must match body content
+📚 FACTUAL (MEDIUM severity = needs fixing)
+□ unsupported_numbers - Numbers without source verification
+□ unsupported_quotes - Quotes without attribution
+□ misattributed_sources - Misattributed sources
+□ hallucinated_events - Events that didn't happen
+□ wrong_dates - Incorrect dates
+□ speculative_language - Overly speculative claims (LOW)
 
-3. WRITING QUALITY
-- Fix grammar issues
-- Remove redundancy and overly long paragraphs
-- Improve clarity and flow
-- Make it sound human and editorially clean
+🧠 QUALITY (LOW-MEDIUM severity)
+□ grammar_flow - Grammar or flow issues (LOW)
+□ ai_repetition - AI-style repetitive phrases (MEDIUM)
+□ keyword_stuffing - Keyword stuffing (MEDIUM)
+□ short_paragraphs - Paragraphs too short (LOW)
+□ missing_formatting - Missing H1/H2 formatting (LOW)
+□ weak_intro - Weak introduction or summary (MEDIUM)
 
-4. STYLE GUIDE
-- Professional, neutral, AI-news tone
-- Proper heading structure (H1 for title, H2 for sections)
-- Consistent terminology for AI terms, company names, model names
+🔍 SEO (LOW severity)
+□ title_clarity - Unclear title
+□ heading_structure - Poor heading hierarchy
+□ metadata_incomplete - Missing meta description
+□ keyword_competitiveness - Low keyword relevance
+□ readability_score - Poor readability score
 
-5. SEO BEST PRACTICES
-- Include relevant keywords naturally
-- Good heading hierarchy
-- First paragraph should contain the main topic
-- Summary should work as meta description
+🛡 COMPLIANCE (HIGH severity = rejection)
+□ illegal_products - Promotes illegal products/services
+□ discriminatory_claims - Discriminatory claims
+□ clickbait_financial - Clickbait financial promises (MEDIUM)
+□ personal_data - Exposes personal data
+□ brand_slander - Brand defamation
 
-6. SAFETY & COMPLIANCE
-- Remove harmful or inappropriate content
-- Avoid misinformation
-- Prevent defamation
+═══════════════════════════════════════
 
-Return a JSON object with:
-- issues_found: List of problems identified
-- improvements_made: List of changes you made
-- final_article: The corrected article (same schema as input)
-- confidence_score: 0-1 score of article quality after improvements`;
+For each issue found, include in the issues array:
+{
+  "category": "safety|factual|quality|seo|compliance",
+  "subcategory": "the_specific_issue_name_from_above",
+  "severity": "high|medium|low",
+  "description": "What's wrong",
+  "suggestion": "How to fix (if fixable)"
+}
 
-    const result = await generateObject({
-        model: criticModel,
-        schema: CriticResultSchema,
-        prompt,
-    });
+Also provide:
+- confidence_score: 0.0-1.0 overall quality score
+- final_article: The corrected article with fixes applied`;
 
-    return {
-        ...result.object,
-        pass: result.object.confidence_score >= 0.7,
-    };
+  const result = await generateObject({
+    model: criticModel,
+    schema: CriticResultSchema,
+    prompt,
+  });
+
+  const issues = result.object.issues;
+  
+  return {
+    issues,
+    decision: determineDecision(issues),
+    high_severity_issues: getHighSeverityIssues(issues),
+    fixable_issues: getFixableIssues(issues),
+    confidence_score: result.object.confidence_score,
+    final_article: result.object.final_article,
+  };
 }

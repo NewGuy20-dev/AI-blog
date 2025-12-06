@@ -132,3 +132,21 @@ body {
     opacity: 0;
   }
 }
+
+/* Theme-aware P and cursor styling */
+.pageo-p {
+  color: var(--color-text);
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text x="8" y="24" font-size="24" font-weight="bold" fill="%23000000">P</text></svg>') 8 24, auto;
+}
+
+.dark .pageo-p {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><text x="8" y="24" font-size="24" font-weight="bold" fill="%237A4FFF">P</text></svg>') 8 24, auto;
+}
+
+.logo-svg {
+  filter: invert(0);
+}
+
+.dark .logo-svg {
+  filter: invert(1);
+}

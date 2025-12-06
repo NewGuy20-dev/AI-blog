@@ -46,10 +46,11 @@ export const getBySlug = query({
 export const list = query({
     args: { limit: v.optional(v.number()) },
     handler: async (ctx, args) => {
-        return await ctx.db
+        const posts = await ctx.db
             .query("posts")
             .order("desc")
-            .take(args.limit ?? 20);
+            .take((args.limit ?? 20) + 50);
+        return posts.filter((p) => p.status !== "archived").slice(0, args.limit ?? 20);
     },
 });
 
@@ -76,5 +77,19 @@ export const getRelated = query({
             return [...related, ...fallback].slice(0, args.limit ?? 3);
         }
         return related;
+    },
+});
+
+export const archiveOld = mutation({
+    args: { maxAgeDays: v.optional(v.number()) },
+    handler: async (ctx, args) => {
+        const maxAge = (args.maxAgeDays ?? 30) * 24 * 60 * 60 * 1000;
+        const cutoff = Date.now() - maxAge;
+        const posts = await ctx.db.query("posts").collect();
+        const toArchive = posts.filter((p) => p.status === "published" && p.publishedAt < cutoff);
+        for (const post of toArchive) {
+            await ctx.db.patch(post._id, { status: "archived" });
+        }
+        return { archived: toArchive.length };
     },
 });

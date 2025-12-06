@@ -12,10 +12,10 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-[var(--color-card)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="pageo-logo w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center overflow-hidden">
-            <Image src="/logo.png" alt="Logo" width={32} height={32} />
+          <div className="pageo-logo w-8 h-8 flex items-center justify-center overflow-hidden">
+            <Image src="/logo.svg" alt="Logo" width={32} height={32} className="logo-svg" />
           </div>
-          <span className="text-lg font-bold">Pageo</span>
+          <span className="text-lg font-bold pageo-p">Pageo</span>
         </Link>
         <nav className="flex items-center gap-2">
           <Link

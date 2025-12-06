@@ -1,15 +1,25 @@
 import { generateObject } from "ai";
 import { model } from "./config";
-import { ArticleSchema } from "../schemas/article";
+import { Article, ArticleSchema } from "../schemas/article";
 import { SearchResult } from "./search";
+import { CriticIssue } from "./issues";
 
-export async function generateArticle(topic: string, searchResults: SearchResult[]) {
-    const context = searchResults
-        .map((r) => `Title: ${r.title}\nSource: ${r.url}\nDate: ${r.publishedDate}\nContent: ${r.content}`)
-        .join("\n\n");
+export interface GeneratorFeedback {
+  previousDraft: Article;
+  issues: CriticIssue[];
+  attemptNumber: number;
+}
 
-    const prompt = `
-You are an objective news reporter. Write a structured news article about "${topic}" based ONLY on the provided context.
+export async function generateArticle(
+  topic: string,
+  searchResults: SearchResult[],
+  feedback?: GeneratorFeedback
+) {
+  const context = searchResults
+    .map((r) => `Title: ${r.title}\nSource: ${r.url}\nDate: ${r.publishedDate}\nContent: ${r.content}`)
+    .join("\n\n");
+
+  let prompt = `You are an objective news reporter. Write a structured news article about "${topic}" based ONLY on the provided context.
 
 Requirements:
 - title: A compelling headline
@@ -23,14 +33,37 @@ Requirements:
 - readingTime: Estimated minutes to read
 
 Context:
-${context}
-`;
+${context}`;
 
-    const result = await generateObject({
-        model,
-        schema: ArticleSchema,
-        prompt,
-    });
+  if (feedback) {
+    const issuesList = feedback.issues
+      .map(i => `- [${i.category}/${i.subcategory}] ${i.description}${i.suggestion ? `\n  Fix: ${i.suggestion}` : ''}`)
+      .join('\n');
 
-    return result.object;
+    prompt += `
+
+═══════════════════════════════════════
+REVISION REQUIRED (Attempt ${feedback.attemptNumber})
+═══════════════════════════════════════
+
+Your previous draft had these issues:
+${issuesList}
+
+Previous draft title: "${feedback.previousDraft.title}"
+
+INSTRUCTIONS:
+1. Fix ALL issues listed above
+2. Keep what worked in the previous version
+3. Only include verifiable facts from the context
+4. Remove any problematic content
+5. Improve weak areas`;
+  }
+
+  const result = await generateObject({
+    model,
+    schema: ArticleSchema,
+    prompt,
+  });
+
+  return result.object;
 }

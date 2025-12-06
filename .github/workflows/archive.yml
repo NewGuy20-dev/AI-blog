@@ -1,0 +1,33 @@
+name: Weekly Archive Old Posts
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Archive Old Posts
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          API_URL="${PROD_URL}/api/archive-old"
+          echo "Calling: $API_URL"
+          
+          HTTP_CODE=$(curl -s -o response.txt -w "%{http_code}" \
+            -X GET "$API_URL" \
+            -H "Authorization: Bearer $CRON_SECRET")
+          
+          echo "Response code: $HTTP_CODE"
+          cat response.txt
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Success!"
+            exit 0
+          fi
+          
+          echo "Failed with status $HTTP_CODE"
+          exit 1

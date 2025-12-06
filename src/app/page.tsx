@@ -1,94 +1,74 @@
-"use client";
-
-import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
-import { api } from "../../convex/_generated/api";
-import { ArticleCard } from "@/components/ui/ArticleCard";
-import { Sidebar } from "@/components/ui/Sidebar";
+import Link from "next/link";
+import { ArrowRight, Sparkles, Zap, BookOpen } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
-const INITIAL_COUNT = 6;
-const LOAD_MORE_COUNT = 6;
+const features = [
+  {
+    icon: Sparkles,
+    title: "AI-Curated",
+    description: "Smart algorithms surface the most relevant news for you",
+  },
+  {
+    icon: Zap,
+    title: "Real-time Updates",
+    description: "Stay ahead with the latest developments as they happen",
+  },
+  {
+    icon: BookOpen,
+    title: "Deep Insights",
+    description: "Go beyond headlines with comprehensive analysis",
+  },
+];
 
-export default function Home() {
-  const posts = useQuery(api.posts.list, { limit: 100 });
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
-
-  const filteredPosts = useMemo(() => {
-    if (!posts || !selectedCategory) return posts;
-    return posts.filter((p: any) => 
-      p.tags?.some((t: string) => t.toLowerCase() === selectedCategory.toLowerCase())
-    );
-  }, [posts, selectedCategory]);
-
-  const handleCategoryChange = (cat: string | null) => {
-    setSelectedCategory(cat);
-    setVisibleCount(INITIAL_COUNT);
-  };
-
-  const visiblePosts = filteredPosts?.slice(0, visibleCount);
-  const hasMore = filteredPosts && filteredPosts.length > visibleCount;
-  const totalCount = filteredPosts?.length || 0;
-
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen">
-      <Sidebar selectedCategory={selectedCategory} onSelectCategory={handleCategoryChange} />
+    <div className="min-h-screen bg-[var(--color-background)]">
+      <ThemeToggle />
       
-      <div className="flex-1 min-h-screen">
-        <ThemeToggle />
-        
-        {/* Header */}
-        <header className="px-6 md:px-12 pt-12 pb-8 md:pt-16 md:pb-12">
-          <div className="max-w-4xl">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">
-              {selectedCategory || "Discover"}
-            </h1>
-            <p className="text-[var(--color-text-muted)] text-lg">
-              {selectedCategory 
-                ? `${totalCount} article${totalCount !== 1 ? "s" : ""} in ${selectedCategory}`
-                : "Your personalized news feed"
-              }
-            </p>
-          </div>
-        </header>
+      {/* Header */}
+      <header className="px-6 py-6">
+        <Logo />
+      </header>
 
-        {/* Content */}
-        <main className="px-6 md:px-12 pb-16">
-          {posts === undefined ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-52 rounded-2xl bg-[var(--color-border)]/30 animate-pulse" />
-              ))}
+      {/* Hero */}
+      <section className="px-6 pt-16 pb-24 md:pt-24 md:pb-32 text-center">
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6 max-w-3xl mx-auto">
+          Your News,{" "}
+          <span className="text-[var(--color-primary)]">Curated</span>
+        </h1>
+        <p className="text-lg md:text-xl text-[var(--color-text-muted)] max-w-xl mx-auto mb-10">
+          Stay informed with the latest stories that matter. Personalized, distilled, delivered.
+        </p>
+        <Link
+          href="/feed"
+          className="inline-flex items-center gap-2 px-8 py-4 bg-[var(--color-primary)] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+        >
+          Explore Feed
+          <ArrowRight size={18} />
+        </Link>
+      </section>
+
+      {/* Features */}
+      <section className="px-6 pb-24 md:pb-32">
+        <div className="max-w-4xl mx-auto grid gap-6 md:grid-cols-3">
+          {features.map((f) => (
+            <div
+              key={f.title}
+              className="p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]"
+            >
+              <f.icon size={24} className="text-[var(--color-primary)] mb-4" />
+              <h3 className="font-semibold mb-2">{f.title}</h3>
+              <p className="text-sm text-[var(--color-text-muted)]">{f.description}</p>
             </div>
-          ) : visiblePosts?.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-[var(--color-text-muted)] text-lg">
-                No articles found{selectedCategory ? ` in ${selectedCategory}` : ""}.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {visiblePosts?.map((post: any) => (
-                  <ArticleCard key={post._id} post={post} />
-                ))}
-              </div>
-              
-              {hasMore && (
-                <div className="flex justify-center mt-12">
-                  <button
-                    onClick={() => setVisibleCount((c) => c + LOAD_MORE_COUNT)}
-                    className="px-8 py-3 text-sm font-medium border border-[var(--color-border)] rounded-full hover:bg-[var(--color-primary)] hover:text-white hover:border-[var(--color-primary)] transition-all duration-200"
-                  >
-                    Load more articles
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </main>
-      </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="px-6 py-8 border-t border-[var(--color-border)] text-center">
+        <p className="text-sm text-[var(--color-text-muted)]">© 2024 Pageo</p>
+      </footer>
     </div>
   );
 }

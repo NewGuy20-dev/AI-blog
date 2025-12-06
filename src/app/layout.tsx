@@ -42,6 +42,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2064850753799979"
+          crossOrigin="anonymous"
+        ></script>
+      </head>
       <body
         className={`${inter.variable} ${sourceSerif.variable} antialiased font-sans`}
       >

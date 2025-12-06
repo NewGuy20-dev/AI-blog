@@ -16,22 +16,22 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#000000",
 };
 
 export const metadata: Metadata = {
-  title: "AI News Blog",
-  description: "Auto-generated AI news",
+  title: "Pageo",
+  description: "Your personalized news feed",
   manifest: "/manifest.json",
-  applicationName: "AI News Blog",
+  applicationName: "Pageo",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "AI News",
+    title: "Pageo",
   },
   icons: {
-    icon: "/icon-192x192.png",
-    apple: "/icon-192x192.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
 };
 

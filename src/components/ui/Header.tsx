@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Moon, Sun, Bookmark } from "lucide-react";
 import { useTheme } from "@/lib/ThemeProvider";
 
@@ -11,10 +12,10 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-[var(--color-card)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">AI</span>
+          <div className="pageo-logo w-8 h-8 rounded-lg bg-[var(--color-primary)] flex items-center justify-center overflow-hidden">
+            <Image src="/logo.png" alt="Logo" width={32} height={32} />
           </div>
-          <span className="text-xl font-bold">News</span>
+          <span className="text-lg font-bold">Pageo</span>
         </Link>
         <nav className="flex items-center gap-2">
           <Link

@@ -1,27 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #6366F1;
-  --color-primary-hover: #4F46E5;
-  --color-accent: #F97316;
-  --color-text: #0F172A;
-  --color-text-muted: #64748B;
-  --color-border: #E2E8F0;
-  --color-surface: #F8FAFC;
   --color-background: #FFFFFF;
+  --color-sidebar: #FFFFFF;
+  --color-text: #000000;
+  --color-text-muted: #666666;
+  --color-border: #1A1A1A;
+  --color-accent: #E5E5E5;
+  --color-primary: #000000;
+  --color-primary-hover: #333333;
   --color-card: #FFFFFF;
-  --gradient-hero: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+  --color-surface: #FFFFFF;
 }
 
 .dark {
-  --color-primary: #818CF8;
-  --color-primary-hover: #6366F1;
-  --color-text: #F1F5F9;
-  --color-text-muted: #94A3B8;
-  --color-border: #334155;
-  --color-surface: #0F172A;
-  --color-background: #1E293B;
-  --color-card: #1E293B;
+  --color-background: #000000;
+  --color-sidebar: #050505;
+  --color-text: #FFFFFF;
+  --color-text-muted: #999999;
+  --color-border: #222222;
+  --color-accent: #7A4FFF;
+  --color-accent-hover: #B299FF;
+  --color-primary: #7A4FFF;
+  --color-primary-hover: #B299FF;
+  --color-card: #050505;
+  --color-surface: #000000;
 }
 
 @theme inline {
@@ -37,7 +40,7 @@
 }
 
 body {
-  background: var(--color-surface);
+  background: var(--color-background);
   color: var(--color-text);
   transition: background-color 0.2s, color 0.2s;
 }
@@ -47,19 +50,23 @@ body {
   color: white;
 }
 
-.gradient-text {
-  background: var(--gradient-hero);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Sidebar slide-in animation */
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
-.card-hover {
-  transition: all 0.2s ease;
+@keyframes slideOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
 }
-.card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+
+.sidebar-open {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.sidebar-closed {
+  animation: slideOut 0.3s ease-out forwards;
 }
 
 @keyframes fadeIn {
@@ -69,23 +76,6 @@ body {
 
 .animate-fadeIn {
   animation: fadeIn 0.4s ease-out forwards;
-}
-
-.stagger-1 { animation-delay: 0.05s; }
-.stagger-2 { animation-delay: 0.1s; }
-.stagger-3 { animation-delay: 0.15s; }
-.stagger-4 { animation-delay: 0.2s; }
-.stagger-5 { animation-delay: 0.25s; }
-
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton {
-  background: linear-gradient(90deg, var(--color-border) 25%, var(--color-card) 50%, var(--color-border) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
 }
 
 .line-clamp-2 {
@@ -100,4 +90,45 @@ body {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Pageo logo ping animation */
+.pageo-logo {
+  position: relative;
+}
+
+.pageo-logo::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: #000;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.dark .pageo-logo::after {
+  background: #A78BFA;
+}
+
+.pageo-logo:hover::after {
+  animation: ping-animation 450ms ease-out;
+}
+
+@keyframes ping-animation {
+  0% {
+    width: 0.6rem;
+    height: 0.6rem;
+    opacity: 0.6;
+  }
+  100% {
+    width: 3.6rem;
+    height: 3.6rem;
+    opacity: 0;
+  }
 }

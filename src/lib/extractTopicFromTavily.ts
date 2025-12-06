@@ -24,7 +24,7 @@ export async function extractTopicFromTavily(): Promise<{ topic: string; results
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       api_key: apiKey,
-      query: "Trending technology news right now. Summaries + keywords.",
+      query: "Trending news right now. Summaries + keywords.",
       search_depth: "basic",
       include_answer: true,
       max_results: 5,

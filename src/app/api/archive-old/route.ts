@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+const convex = new ConvexHttpClient(
+  process.env.NEXT_PUBLIC_CONVEX_URL || "https://fantastic-alligator-727.convex.cloud"
+);
 
 function checkAuth(req: Request): boolean {
     const authHeader = req.headers.get("authorization");

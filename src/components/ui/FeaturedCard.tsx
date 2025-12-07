@@ -24,7 +24,7 @@ export function FeaturedCard({ post }: FeaturedCardProps) {
               Featured
             </span>
             <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
-              {post.tags[0] || "AI"}
+              {post.tags[0] || "General"}
             </span>
           </div>
           <h2 className="text-2xl md:text-3xl font-bold mb-3 group-hover:underline decoration-2 underline-offset-4">

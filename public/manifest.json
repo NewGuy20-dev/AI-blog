@@ -1,32 +1,32 @@
 {
-  "name": "AI News Blog",
-  "short_name": "AI News",
-  "description": "Auto-generated AI news and technology updates",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a",
+  "name": "Pageo",
+  "short_name": "Pageo",
+  "description": "Your personalized news feed",
+  "theme_color": "#000000",
+  "background_color": "#FFFFFF",
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icons/pageo-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/icons/pageo-512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/icon-maskable-192.png",
+      "src": "/icons/pageo-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icon-maskable-512.png",
+      "src": "/icons/pageo-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

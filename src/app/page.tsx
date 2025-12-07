@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 const features = [
   {
     icon: Sparkles,
-    title: "AI-Curated",
+    title: "Curated",
     description: "Smart algorithms surface the most relevant news for you",
   },
   {

@@ -32,14 +32,6 @@ export function Header() {
           >
             {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors ml-2"
-          >
-            GitHub
-          </a>
         </nav>
       </div>
     </header>

@@ -27,7 +27,7 @@ export function NewsletterSignup() {
     <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white text-center">
       <Mail className="mx-auto mb-4" size={32} />
       <h3 className="text-xl font-bold mb-2">Stay Updated</h3>
-      <p className="text-white/80 mb-6 text-sm">Get the latest AI news delivered to your inbox.</p>
+      <p className="text-white/80 mb-6 text-sm">Get the latest news delivered to your inbox.</p>
       {status === "success" ? (
         <p className="text-green-200 font-medium">✓ You&apos;re subscribed!</p>
       ) : (

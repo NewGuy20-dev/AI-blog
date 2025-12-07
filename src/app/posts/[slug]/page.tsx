@@ -6,7 +6,7 @@ import { ArticleContent } from "@/components/ui/ArticleContent";
 import { Header } from "@/components/ui/Header";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ReadingProgress } from "@/components/ui/ReadingProgress";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { RelatedArticles } from "@/components/ui/RelatedArticles";
@@ -14,6 +14,7 @@ import { TableOfContents } from "@/components/ui/TableOfContents";
 
 export default function PostPage() {
   const params = useParams();
+  const router = useRouter();
   const slug = params.slug as string;
   const post = useQuery(api.posts.getBySlug, { slug });
 
@@ -51,6 +52,10 @@ export default function PostPage() {
       <article className="max-w-3xl mx-auto px-4 py-12">
         <Link
           href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            router.back();
+          }}
           className="inline-flex items-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] mb-8 transition-colors"
         >
           ← Back to feed

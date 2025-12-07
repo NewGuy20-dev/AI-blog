@@ -10,8 +10,8 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>AI News</title>
-    <description>Autonomous newsroom powered by AI. Curated, verified, and delivered fresh.</description>
+    <title>Pageo</title>
+    <description>Your personalized news feed. Curated, verified, and delivered fresh.</description>
     <link>${siteUrl}</link>
     <atom:link href="${siteUrl}/api/rss" rel="self" type="application/rss+xml"/>
     <language>en-us</language>

@@ -29,6 +29,18 @@ export default defineSchema({
       severity: v.string(),
       description: v.string(),
     }))),
+    featuredImage: v.optional(v.object({
+      url: v.string(),
+      alt: v.string(),
+      attribution: v.optional(v.object({
+        creator: v.optional(v.string()),
+        creatorUrl: v.optional(v.string()),
+        license: v.string(),
+        licenseUrl: v.optional(v.string()),
+        source: v.string(),
+        sourceUrl: v.string(),
+      })),
+    })),
   }).index("by_slug", ["slug"]),
 
   subscribers: defineTable({

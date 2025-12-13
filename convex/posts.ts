@@ -17,6 +17,18 @@ export const create = mutation({
         status: v.union(v.literal("draft"), v.literal("published")),
         publishedAt: v.number(),
         readingTime: v.number(),
+        featuredImage: v.optional(v.object({
+            url: v.string(),
+            alt: v.string(),
+            attribution: v.optional(v.object({
+                creator: v.optional(v.string()),
+                creatorUrl: v.optional(v.string()),
+                license: v.string(),
+                licenseUrl: v.optional(v.string()),
+                source: v.string(),
+                sourceUrl: v.string(),
+            })),
+        })),
     },
     handler: async (ctx, args) => {
         const existing = await ctx.db

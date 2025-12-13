@@ -3,6 +3,7 @@ import { api } from "../../../convex/_generated/api";
 import { searchNews } from "./search";
 import { refineArticle } from "./refinement";
 import { extractTopicFromTavily } from "../extractTopicFromTavily";
+import { searchImage } from "./images";
 import { v4 as uuidv4 } from "uuid";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
@@ -44,6 +45,11 @@ export async function runPipeline() {
 
     // 3. Handle result based on status
     if (result.status === 'published' && result.article) {
+      // Fetch CC/PD image for the article
+      await log(runId, "image", "started", { topic: actualTopic });
+      const featuredImage = await searchImage(actualTopic);
+      await log(runId, "image", featuredImage ? "success" : "skipped", { hasImage: !!featuredImage });
+
       await convex.mutation(api.posts.create, {
         slug: result.article.slug,
         title: result.article.title,
@@ -54,6 +60,7 @@ export async function runPipeline() {
         status: "published",
         publishedAt: Date.now(),
         readingTime: result.article.readingTime || 5,
+        featuredImage: featuredImage || undefined,
       });
       await log(runId, "save", "success", { slug: result.article.slug, status: "published" });
     } else if (result.status === 'draft' && result.article) {

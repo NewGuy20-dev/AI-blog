@@ -87,6 +87,39 @@ export default function PostPage() {
           </div>
         </header>
 
+        {post.featuredImage && (
+          <figure className="mb-10 -mx-4 md:mx-0">
+            <img
+              src={post.featuredImage.url}
+              alt={post.featuredImage.alt}
+              className="w-full rounded-xl object-cover max-h-96"
+            />
+            {post.featuredImage.attribution && (
+              <figcaption className="mt-2 text-xs text-[var(--color-text-muted)] text-center">
+                Photo{post.featuredImage.attribution.creator && (
+                  <> by{" "}
+                    {post.featuredImage.attribution.creatorUrl ? (
+                      <a href={post.featuredImage.attribution.creatorUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-primary)]">
+                        {post.featuredImage.attribution.creator}
+                      </a>
+                    ) : post.featuredImage.attribution.creator}
+                  </>
+                )}
+                {" / "}
+                {post.featuredImage.attribution.licenseUrl ? (
+                  <a href={post.featuredImage.attribution.licenseUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-primary)]">
+                    {post.featuredImage.attribution.license}
+                  </a>
+                ) : post.featuredImage.attribution.license}
+                {" via "}
+                <a href={post.featuredImage.attribution.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--color-primary)]">
+                  {post.featuredImage.attribution.source}
+                </a>
+              </figcaption>
+            )}
+          </figure>
+        )}
+
         <TableOfContents content={post.content} />
 
         <div className="bg-[var(--color-card)] rounded-2xl p-8 md:p-12 shadow-sm border border-[var(--color-border)]">

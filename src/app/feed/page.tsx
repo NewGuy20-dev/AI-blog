@@ -1,42 +1,43 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { ArticleCard } from "@/components/ui/ArticleCard";
 import { Sidebar } from "@/components/ui/Sidebar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { UserMenu } from "@/components/ui/UserMenu";
 
 const INITIAL_COUNT = 6;
 const LOAD_MORE_COUNT = 6;
 
-export default function Home() {
-  const posts = useQuery(api.posts.list, { limit: 100 });
+export default function FeedPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_COUNT);
 
-  const filteredPosts = useMemo(() => {
-    if (!posts || !selectedCategory) return posts;
-    return posts.filter((p: any) => 
-      p.tags?.some((t: string) => t.toLowerCase() === selectedCategory.toLowerCase())
-    );
-  }, [posts, selectedCategory]);
+  const posts = useQuery(api.posts.list, { 
+    limit: 100,
+    category: selectedCategory ?? undefined,
+  });
 
   const handleCategoryChange = (cat: string | null) => {
     setSelectedCategory(cat);
     setVisibleCount(INITIAL_COUNT);
   };
 
-  const visiblePosts = filteredPosts?.slice(0, visibleCount);
-  const hasMore = filteredPosts && filteredPosts.length > visibleCount;
-  const totalCount = filteredPosts?.length || 0;
+  const visiblePosts = posts?.slice(0, visibleCount);
+  const hasMore = posts && posts.length > visibleCount;
+  const totalCount = posts?.length || 0;
 
   return (
     <div className="flex min-h-screen">
       <Sidebar selectedCategory={selectedCategory} onSelectCategory={handleCategoryChange} />
       
       <div className="flex-1 min-h-screen">
-        <ThemeToggle />
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-2">
+          <ThemeToggle />
+          <UserMenu position="top" />
+        </div>
         
         {/* Header */}
         <header className="px-6 md:px-12 pt-12 pb-8 md:pt-16 md:pb-12">
@@ -70,7 +71,7 @@ export default function Home() {
           ) : (
             <>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {visiblePosts?.map((post: any) => (
+                {visiblePosts?.map((post) => (
                   <ArticleCard key={post._id} post={post} />
                 ))}
               </div>

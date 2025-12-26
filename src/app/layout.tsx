@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
-import ConvexClientProvider from "./ConvexClientProvider";
+import { Providers } from "./providers";
 import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
 import { ThemeProvider } from "@/lib/ThemeProvider";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -53,9 +54,10 @@ export default function RootLayout({
         className={`${inter.variable} ${sourceSerif.variable} antialiased font-sans`}
       >
         <ServiceWorkerRegistration />
-        <ConvexClientProvider>
+        <Providers>
           <ThemeProvider>{children}</ThemeProvider>
-        </ConvexClientProvider>
+          <Toaster position="bottom-right" richColors />
+        </Providers>
       </body>
     </html>
   );

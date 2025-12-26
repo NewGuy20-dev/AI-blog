@@ -1,13 +1,14 @@
 {
   "name": "Pageo",
   "short_name": "Pageo",
-  "description": "Your personalized news feed",
+  "description": "AI-powered personalized news feed",
   "theme_color": "#000000",
   "background_color": "#FFFFFF",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "scope": "/",
-  "start_url": "/",
+  "start_url": "/feed",
+  "id": "/feed",
   "icons": [
     {
       "src": "/icons/pageo-192.png",
@@ -32,5 +33,18 @@
       "purpose": "maskable"
     }
   ],
-  "categories": ["news", "technology", "media"]
+  "categories": ["news", "technology", "media"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "url": "/feed",
+      "description": "Browse latest news"
+    },
+    {
+      "name": "Bookmarks",
+      "url": "/bookmarks",
+      "description": "View saved articles"
+    }
+  ]
 }

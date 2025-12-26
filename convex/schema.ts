@@ -7,6 +7,29 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
+  userProfiles: defineTable({
+    userId: v.string(),
+    bio: v.optional(v.string()),
+    website: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    preferences: v.optional(v.object({
+      theme: v.optional(v.string()),
+      accentColor: v.optional(v.string()),
+      fontSize: v.optional(v.string()),
+      reducedMotion: v.optional(v.boolean()),
+      emailDigest: v.optional(v.string()),
+      pushNotifications: v.optional(v.boolean()),
+    })),
+    stats: v.optional(v.object({
+      articlesRead: v.optional(v.number()),
+      readingStreak: v.optional(v.number()),
+      lastActive: v.optional(v.number()),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_userId", ["userId"]),
+
   posts: defineTable({
     slug: v.string(),
     title: v.string(),
@@ -19,6 +42,7 @@ export default defineSchema({
       })
     ),
     tags: v.array(v.string()),
+    category: v.optional(v.string()),
     status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived"), v.literal("rejected")),
     publishedAt: v.number(),
     readingTime: v.number(),
@@ -41,7 +65,18 @@ export default defineSchema({
         sourceUrl: v.string(),
       })),
     })),
-  }).index("by_slug", ["slug"]),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_category", ["category", "publishedAt"])
+    .index("by_status", ["status", "publishedAt"]),
+
+  bookmarks: defineTable({
+    clerkUserId: v.string(),
+    postSlug: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["clerkUserId"])
+    .index("by_user_post", ["clerkUserId", "postSlug"]),
 
   subscribers: defineTable({
     email: v.string(),

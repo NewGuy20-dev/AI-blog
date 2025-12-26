@@ -92,4 +92,11 @@ export default defineSchema({
     durationMs: v.number(),
     createdAt: v.number(),
   }).index("by_runId", ["runId"]),
+
+  admins: defineTable({
+    userId: v.string(),
+    addedBy: v.string(),
+    addedAt: v.number(),
+    isOriginal: v.boolean(),
+  }).index("by_userId", ["userId"]),
 });

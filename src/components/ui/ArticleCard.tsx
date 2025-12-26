@@ -14,15 +14,22 @@ interface ArticleCardProps {
     publishedAt: number;
     readingTime: number;
     tags: string[];
-    image?: string | null;
+    featuredImage?: { url: string; alt: string } | null;
   };
 }
 
 function PlaceholderImage({ category }: { category: string }) {
   const colors: Record<string, { bg: string; accent: string }> = {
-    Sports: { bg: "from-slate-900 to-slate-700", accent: "text-purple-400" },
-    Law: { bg: "from-slate-800 to-slate-600", accent: "text-blue-400" },
-    Education: { bg: "from-slate-900 to-slate-700", accent: "text-green-400" },
+    Technology: { bg: "from-blue-900 to-blue-700", accent: "text-blue-400" },
+    Business: { bg: "from-green-900 to-green-700", accent: "text-green-400" },
+    Sports: { bg: "from-orange-900 to-orange-700", accent: "text-orange-400" },
+    Entertainment: { bg: "from-purple-900 to-purple-700", accent: "text-purple-400" },
+    Health: { bg: "from-red-900 to-red-700", accent: "text-red-400" },
+    Science: { bg: "from-cyan-900 to-cyan-700", accent: "text-cyan-400" },
+    Politics: { bg: "from-gray-800 to-gray-600", accent: "text-gray-400" },
+    World: { bg: "from-indigo-900 to-indigo-700", accent: "text-indigo-400" },
+    Lifestyle: { bg: "from-pink-900 to-pink-700", accent: "text-pink-400" },
+    Opinion: { bg: "from-yellow-900 to-yellow-700", accent: "text-yellow-400" },
     default: { bg: "from-slate-900 to-slate-700", accent: "text-purple-400" },
   };
   
@@ -43,15 +50,21 @@ export function ArticleCard({ post }: ArticleCardProps) {
   const isNew = Date.now() - post.publishedAt < 24 * 60 * 60 * 1000;
   const category = post.tags[0] || "General";
 
+  const handleBookmarkClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggle(post.slug);
+  };
+
   return (
     <article className="group h-full bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-all duration-200 overflow-hidden flex flex-col">
       <Link href={`/posts/${post.slug}`} className="flex flex-col h-full">
         {/* Image */}
         <div className="relative w-full h-40 bg-[var(--color-border)] overflow-hidden">
-          {post.image ? (
+          {post.featuredImage?.url ? (
             <Image
-              src={post.image}
-              alt={post.title}
+              src={post.featuredImage.url}
+              alt={post.featuredImage.alt || post.title}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
@@ -75,7 +88,7 @@ export function ArticleCard({ post }: ArticleCardProps) {
               </span>
             </div>
             <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle(post.slug); }}
+              onClick={handleBookmarkClick}
               className={`p-2 -m-1 rounded-lg transition-all ${
                 bookmarked 
                   ? "text-[var(--color-primary)]" 

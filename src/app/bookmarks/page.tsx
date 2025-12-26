@@ -1,94 +1,91 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useUser } from "@auth0/nextjs-auth0/client";
 import { api } from "../../../convex/_generated/api";
 import { ArticleCard } from "@/components/ui/ArticleCard";
 import { useBookmarks } from "@/lib/hooks/useBookmarks";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { Logo } from "@/components/ui/Logo";
+import { SettingsLayout } from "@/components/ui/SettingsLayout";
+import { Bookmark, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { Bookmark, Trash2, ArrowLeft } from "lucide-react";
 
 export default function BookmarksPage() {
+  const { user } = useUser();
+  const isSignedIn = !!user;
   const { bookmarks, clear, count } = useBookmarks();
-  const posts = useQuery(api.posts.list, { limit: 100 });
+  
+  const convexPosts = useQuery(
+    api.bookmarks.getBookmarkedPosts,
+    isSignedIn ? {} : "skip"
+  );
+  
+  const allPosts = useQuery(api.posts.list, !isSignedIn ? { limit: 100 } : "skip");
+  
+  const bookmarkedPosts = isSignedIn 
+    ? (convexPosts?.filter(Boolean) ?? [])
+    : (allPosts?.filter((p) => bookmarks.includes(p.slug)) ?? []);
 
-  const bookmarkedPosts = posts?.filter((p: any) => bookmarks.includes(p.slug));
+  const isLoading = isSignedIn ? convexPosts === undefined : allPosts === undefined;
 
   return (
-    <div className="min-h-screen">
-      <ThemeToggle />
-      
+    <SettingsLayout>
       {/* Header */}
-      <header className="px-6 md:px-12 pt-8 pb-6 flex items-center justify-between border-b border-[var(--color-border)]">
-        <Logo />
-        <Link 
-          href="/" 
-          className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-        >
-          <ArrowLeft size={16} strokeWidth={1.5} />
-          Back
-        </Link>
-      </header>
-
-      {/* Title section */}
-      <div className="px-6 md:px-12 pt-12 pb-8">
-        <div className="max-w-4xl flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-[var(--color-primary)]/10">
-              <Bookmark size={24} strokeWidth={1.5} className="text-[var(--color-primary)]" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Bookmarks</h1>
-              <p className="text-[var(--color-text-muted)] mt-1">
-                {count === 0 ? "No saved articles" : `${count} saved article${count !== 1 ? "s" : ""}`}
-              </p>
-            </div>
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-[var(--color-primary)]/10">
+            <Bookmark size={24} strokeWidth={1.5} className="text-[var(--color-primary)]" />
           </div>
-          
-          {count > 0 && (
-            <button
-              onClick={clear}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-            >
-              <Trash2 size={16} strokeWidth={1.5} />
-              Clear
-            </button>
-          )}
+          <div>
+            <h1 className="text-2xl font-bold">Bookmarks</h1>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              {count === 0 ? "No saved articles" : `${count} saved article${count !== 1 ? "s" : ""}`}
+            </p>
+          </div>
         </div>
+        
+        {count > 0 && (
+          <button
+            onClick={clear}
+            className="flex items-center gap-2 px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+          >
+            <Trash2 size={16} strokeWidth={1.5} />
+            Clear all
+          </button>
+        )}
       </div>
 
       {/* Content */}
-      <main className="px-6 md:px-12 pb-16">
-        {posts === undefined ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-52 rounded-2xl bg-[var(--color-border)]/30 animate-pulse" />
-            ))}
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-48 rounded-xl bg-[var(--color-border)]/30 animate-pulse" />
+          ))}
+        </div>
+      ) : bookmarkedPosts.length === 0 ? (
+        <div className="py-16 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-[var(--color-border)]/30 flex items-center justify-center mx-auto mb-6">
+            <Bookmark size={28} strokeWidth={1.5} className="text-[var(--color-text-muted)]" />
           </div>
-        ) : bookmarkedPosts?.length === 0 ? (
-          <div className="max-w-md py-16 text-center mx-auto">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--color-border)]/30 flex items-center justify-center mx-auto mb-6">
-              <Bookmark size={28} strokeWidth={1.5} className="text-[var(--color-text-muted)]" />
-            </div>
-            <p className="text-[var(--color-text-muted)] mb-6">
-              Articles you bookmark will appear here
-            </p>
-            <Link 
-              href="/" 
-              className="inline-flex px-6 py-2.5 text-sm font-medium bg-[var(--color-primary)] text-white rounded-full hover:opacity-90 transition-opacity"
-            >
-              Browse articles
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl">
-            {bookmarkedPosts?.map((post: any) => (
-              <ArticleCard key={post._id} post={post} />
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+          <p className="text-[var(--color-text-muted)] mb-6">
+            {isSignedIn 
+              ? "Articles you bookmark will appear here"
+              : "Sign in to sync bookmarks across devices"
+            }
+          </p>
+          <Link 
+            href="/feed" 
+            className="inline-flex px-6 py-2.5 text-sm font-medium bg-[var(--color-primary)] text-white rounded-xl hover:opacity-90 transition-opacity"
+          >
+            Browse articles
+          </Link>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {bookmarkedPosts.map((post) => post && (
+            <ArticleCard key={post._id} post={post} />
+          ))}
+        </div>
+      )}
+    </SettingsLayout>
   );
 }

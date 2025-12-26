@@ -1,11 +1,6 @@
-import { Layers, Trophy, Scale, GraduationCap } from "lucide-react";
+"use client";
 
-const categories = [
-  { name: "All", icon: Layers },
-  { name: "Sports", icon: Trophy },
-  { name: "Law", icon: Scale },
-  { name: "Education", icon: GraduationCap },
-];
+import { CATEGORIES } from "@/lib/constants/categories";
 
 interface CategoryListProps {
   selected: string | null;
@@ -14,13 +9,13 @@ interface CategoryListProps {
 
 export function CategoryList({ selected, onSelect }: CategoryListProps) {
   return (
-    <nav className="flex flex-col gap-1">
-      {categories.map(({ name, icon: Icon }) => {
-        const isSelected = name === "All" ? selected === null : selected === name;
+    <nav className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto pr-2">
+      {CATEGORIES.map(({ id, name, icon: Icon }) => {
+        const isSelected = id === "all" ? selected === null : selected === name;
         return (
           <button
-            key={name}
-            onClick={() => onSelect(name === "All" ? null : name)}
+            key={id}
+            onClick={() => onSelect(id === "all" ? null : name)}
             className={`flex items-center gap-3 px-4 py-3 text-sm rounded-xl transition-all ${
               isSelected
                 ? "bg-[var(--color-primary)] text-white font-medium"

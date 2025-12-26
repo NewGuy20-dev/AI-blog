@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Bookmark } from "lucide-react";
+import Link from "next/link";
 import { Logo } from "./Logo";
 import { CategoryList } from "./CategoryList";
+import { UserMenu } from "./UserMenu";
 
 interface SidebarProps {
   selectedCategory: string | null;
@@ -69,8 +71,18 @@ export function Sidebar({ selectedCategory, onSelectCategory }: SidebarProps) {
           <CategoryList selected={selectedCategory} onSelect={handleSelect} />
         </div>
 
-        <div className="mt-auto pt-6 border-t border-[var(--color-border)]">
+        {/* Bookmarks link */}
+        <Link
+          href="/bookmarks"
+          className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-accent)]/50 hover:text-[var(--color-text)] rounded-xl transition-all mb-4"
+        >
+          <Bookmark size={18} strokeWidth={1.5} />
+          Bookmarks
+        </Link>
+
+        <div className="mt-auto pt-6 border-t border-[var(--color-border)] flex items-center justify-between">
           <p className="text-xs text-[var(--color-text-muted)]">© 2024 Pageo</p>
+          <UserMenu />
         </div>
       </aside>
     </>

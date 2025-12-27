@@ -11,18 +11,18 @@ export async function POST(request: Request) {
     const userAgent = request.headers.get("user-agent") || undefined;
 
     if (!visitorId) {
-      return NextResponse.json({ success: false });
+      return NextResponse.json({ success: false, banned: false });
     }
 
-    await convex.mutation(api.fingerprints.track, {
+    const result = await convex.mutation(api.fingerprints.track, {
       visitorId,
       userId,
       ip,
       userAgent,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, ...result });
   } catch {
-    return NextResponse.json({ success: false });
+    return NextResponse.json({ success: false, banned: false });
   }
 }

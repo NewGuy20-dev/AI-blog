@@ -123,13 +123,18 @@ export default defineSchema({
     userId: v.optional(v.string()),
     userIds: v.optional(v.array(v.string())),
     ip: v.optional(v.string()),
+    ipAddresses: v.optional(v.array(v.string())),
     userAgent: v.optional(v.string()),
     firstSeen: v.number(),
     lastSeen: v.number(),
+    loginTimes: v.optional(v.array(v.number())),
+    riskScore: v.optional(v.number()),
     banned: v.optional(v.boolean()),
     banReason: v.optional(v.string()),
     bannedAt: v.optional(v.number()),
     autoBanned: v.optional(v.boolean()),
+    restricted: v.optional(v.boolean()),
+    restrictedUntil: v.optional(v.number()),
   })
     .index("by_visitorId", ["visitorId"])
     .index("by_userId", ["userId"])

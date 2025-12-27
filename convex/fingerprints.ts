@@ -2,7 +2,24 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 const HARDCODED_ADMIN_IDS = ["google-oauth2|101765812180352599429"];
-const MAX_ACCOUNTS_PER_DEVICE = 2;
+
+interface RiskFactors {
+  fingerprintReused: boolean;
+  rapidSwitching: boolean;
+  sameIpRange: boolean;
+  abnormalBehavior: boolean;
+  automationSignals: boolean;
+}
+
+function calculateRiskScore(factors: RiskFactors): number {
+  let score = 0;
+  if (factors.fingerprintReused) score += 2;
+  if (factors.rapidSwitching) score += 2;
+  if (factors.sameIpRange) score += 1;
+  if (factors.abnormalBehavior) score += 2;
+  if (factors.automationSignals) score += 3;
+  return score;
+}
 
 // Track a fingerprint
 export const track = mutation({
@@ -20,14 +37,61 @@ export const track = mutation({
       .first();
 
     if (existing) {
-      // Track unique user IDs for this fingerprint
+      // Track unique user IDs and login times
       let userIds: string[] = (existing as any).userIds || [];
-      if (args.userId && !userIds.includes(args.userId)) {
+      let loginTimes: number[] = (existing as any).loginTimes || [];
+      let ipAddresses: string[] = (existing as any).ipAddresses || [];
+      
+      const isNewUser = args.userId && !userIds.includes(args.userId);
+      if (isNewUser && args.userId) {
         userIds = [...userIds, args.userId];
       }
+      
+      loginTimes = [...loginTimes.slice(-20), now]; // Keep last 20 logins
+      
+      if (args.ip && !ipAddresses.includes(args.ip)) {
+        ipAddresses = [...ipAddresses.slice(-10), args.ip];
+      }
 
-      // Auto-ban if more than MAX_ACCOUNTS_PER_DEVICE accounts
-      const shouldAutoBan = !existing.banned && userIds.length > MAX_ACCOUNTS_PER_DEVICE;
+      // Calculate risk factors
+      const fingerprintReused = userIds.length > 1;
+      
+      // Rapid switching: 3+ logins in 5 minutes
+      const recentLogins = loginTimes.filter(t => now - t < 5 * 60 * 1000);
+      const rapidSwitching = recentLogins.length >= 3;
+      
+      // Same IP range: check if IPs share first 3 octets
+      const ipPrefixes = ipAddresses.map(ip => ip.split('.').slice(0, 3).join('.'));
+      const sameIpRange = new Set(ipPrefixes).size < ipAddresses.length && ipAddresses.length > 1;
+      
+      // Abnormal behavior: many accounts (4+)
+      const abnormalBehavior = userIds.length >= 4;
+      
+      // Automation signals: very rapid requests (5+ in 10 seconds)
+      const veryRecentLogins = loginTimes.filter(t => now - t < 10 * 1000);
+      const automationSignals = veryRecentLogins.length >= 5;
+
+      const riskScore = calculateRiskScore({
+        fingerprintReused,
+        rapidSwitching,
+        sameIpRange,
+        abnormalBehavior,
+        automationSignals,
+      });
+
+      // Determine action based on risk score
+      let banned = existing.banned;
+      let restricted = (existing as any).restricted;
+      let banReason = existing.banReason;
+      let restrictedUntil = (existing as any).restrictedUntil;
+
+      if (!banned && riskScore >= 8) {
+        banned = true;
+        banReason = `Auto-banned: Risk score ${riskScore} (${userIds.length} accounts)`;
+      } else if (!banned && !restricted && riskScore >= 6) {
+        restricted = true;
+        restrictedUntil = now + 30 * 60 * 1000; // 30 min restriction
+      }
 
       await ctx.db.patch(existing._id, {
         lastSeen: now,
@@ -35,23 +99,30 @@ export const track = mutation({
         ip: args.ip || existing.ip,
         userAgent: args.userAgent || existing.userAgent,
         userIds,
-        ...(shouldAutoBan ? {
-          banned: true,
-          banReason: `Auto-banned: ${userIds.length} accounts detected on same device`,
-          bannedAt: now,
-          autoBanned: true,
-        } : {}),
+        loginTimes,
+        ipAddresses,
+        riskScore,
+        ...(banned && !existing.banned ? { banned: true, banReason, bannedAt: now, autoBanned: true } : {}),
+        ...(restricted ? { restricted, restrictedUntil } : {}),
       });
 
+      // Check if restriction expired
+      if (restricted && restrictedUntil && now > restrictedUntil) {
+        restricted = false;
+      }
+
       return { 
-        banned: existing.banned || shouldAutoBan, 
-        reason: shouldAutoBan ? `Multiple accounts detected (${userIds.length})` : existing.banReason,
-        autoBanned: shouldAutoBan,
+        banned,
+        restricted,
+        restrictedUntil,
+        reason: banned ? banReason : restricted ? `Temporary restriction (risk: ${riskScore})` : undefined,
+        riskScore,
       };
     }
 
     // New fingerprint
     const userIds = args.userId ? [args.userId] : [];
+    const ipAddresses = args.ip ? [args.ip] : [];
     await ctx.db.insert("fingerprints", {
       visitorId: args.visitorId,
       userId: args.userId,
@@ -60,9 +131,12 @@ export const track = mutation({
       firstSeen: now,
       lastSeen: now,
       userIds,
+      loginTimes: [now],
+      ipAddresses,
+      riskScore: 0,
     });
 
-    return { banned: false };
+    return { banned: false, restricted: false, riskScore: 0 };
   },
 });
 

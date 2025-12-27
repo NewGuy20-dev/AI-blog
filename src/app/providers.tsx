@@ -17,7 +17,7 @@ const BANNED_USER_IDS = [
 ];
 
 function SecurityCheck({ children }: { children: ReactNode }) {
-  const [blocked, setBlocked] = useState<{ blocked: boolean; reason?: string; type?: string } | null>(null);
+  const [blocked, setBlocked] = useState<{ blocked: boolean; restricted?: boolean; reason?: string; type?: string } | null>(null);
   const { user } = useUser();
 
   useEffect(() => {
@@ -42,20 +42,10 @@ function SecurityCheck({ children }: { children: ReactNode }) {
         const result = await fp.get();
         const visitorId = result.visitorId;
 
-        // Store fingerprint in localStorage for persistence
         localStorage.setItem('fp_visitor_id', visitorId);
 
-        // Check if fingerprint is banned
-        const fpRes = await fetch(`/api/check-fingerprint?id=${visitorId}`);
-        const fpData = await fpRes.json();
-
-        if (fpData.banned) {
-          setBlocked({ blocked: true, reason: fpData.reason, type: 'fingerprint' });
-          return;
-        }
-
-        // Track fingerprint
-        await fetch('/api/track-fingerprint', {
+        // Track fingerprint and get risk assessment
+        const trackRes = await fetch('/api/track-fingerprint', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -64,6 +54,17 @@ function SecurityCheck({ children }: { children: ReactNode }) {
             ip: ipData.ip,
           }),
         });
+        const trackData = await trackRes.json();
+
+        if (trackData.banned) {
+          setBlocked({ blocked: true, reason: trackData.reason, type: 'fingerprint' });
+          return;
+        }
+
+        if (trackData.restricted) {
+          setBlocked({ blocked: false, restricted: true, reason: trackData.reason, type: 'restricted' });
+          return;
+        }
 
         setBlocked({ blocked: false });
       } catch {
@@ -89,6 +90,18 @@ function SecurityCheck({ children }: { children: ReactNode }) {
           {blocked.reason && blocked.type !== 'vpn' && (
             <p className="text-gray-500 text-sm mt-2">Reason: {blocked.reason}</p>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (blocked.restricted) {
+    return (
+      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-yellow-500 mb-2">Temporarily Restricted</h1>
+          <p className="text-gray-400">Suspicious activity detected. Please try again later.</p>
+          <p className="text-gray-500 text-sm mt-2">{blocked.reason}</p>
         </div>
       </div>
     );

@@ -72,6 +72,19 @@ export default function FingerprintsPage() {
                     {fp.banned && (
                       <span className="px-2 py-0.5 text-xs bg-red-500/20 text-red-400 rounded">BANNED</span>
                     )}
+                    {fp.restricted && (
+                      <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 rounded">RESTRICTED</span>
+                    )}
+                    {fp.riskScore !== undefined && (
+                      <span className={`px-2 py-0.5 text-xs rounded ${
+                        fp.riskScore >= 8 ? 'bg-red-500/20 text-red-400' :
+                        fp.riskScore >= 6 ? 'bg-yellow-500/20 text-yellow-400' :
+                        fp.riskScore >= 3 ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-green-500/20 text-green-400'
+                      }`}>
+                        Risk: {fp.riskScore}
+                      </span>
+                    )}
                   </div>
                   <div className="mt-2 text-xs text-gray-500 space-y-1">
                     {fp.userIds && fp.userIds.length > 0 && (

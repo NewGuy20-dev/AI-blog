@@ -2,8 +2,8 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import { useState } from "react";
-import { ShieldBan, Trash2, Plus } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ShieldBan, Trash2, Plus, Info } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 export default function BlockedIpsPage() {
@@ -14,6 +14,14 @@ export default function BlockedIpsPage() {
   const [newIp, setNewIp] = useState("");
   const [reason, setReason] = useState("");
   const [duration, setDuration] = useState<number | undefined>();
+  const [myIp, setMyIp] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/check-ip')
+      .then(res => res.json())
+      .then(data => setMyIp(data.ip))
+      .catch(() => {});
+  }, []);
 
   const handleBlock = async () => {
     if (!newIp.trim()) return;
@@ -29,6 +37,14 @@ export default function BlockedIpsPage() {
         <ShieldBan className="text-red-500" />
         <h1 className="text-2xl font-bold">Blocked IPs</h1>
       </div>
+
+      {/* Current IP Info */}
+      {myIp && (
+        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg mb-6 flex items-center gap-3">
+          <Info size={18} className="text-blue-400" />
+          <span className="text-sm">Your current IP: <code className="font-mono bg-blue-500/20 px-2 py-0.5 rounded">{myIp}</code></span>
+        </div>
+      )}
 
       {/* Add new IP */}
       <div className="p-4 bg-[#161b22] rounded-lg border border-[#30363d] mb-6">

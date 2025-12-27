@@ -9,6 +9,10 @@ import { Toaster } from 'sonner';
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
+const BANNED_USER_IDS = [
+  "google-oauth2|109465743242996396619",
+];
+
 function IpBlockCheck({ children }: { children: ReactNode }) {
   const [blocked, setBlocked] = useState<{ blocked: boolean; reason?: string } | null>(null);
 
@@ -38,6 +42,18 @@ function IpBlockCheck({ children }: { children: ReactNode }) {
 
 function ConvexAuthSync({ children }: { children: ReactNode }) {
   const { user, isLoading } = useUser();
+
+  // Check if user is banned
+  if (!isLoading && user && BANNED_USER_IDS.includes(user.sub as string)) {
+    return (
+      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">Account Suspended</h1>
+          <p className="text-gray-400">Your account has been banned.</p>
+        </div>
+      </div>
+    );
+  }
 
   const fetchToken = useCallback(async () => {
     try {

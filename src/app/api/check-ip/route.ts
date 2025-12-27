@@ -11,8 +11,8 @@ export async function GET(request: Request) {
 
   try {
     const result = await convex.query(api.blockedIps.isBlocked, { ip });
-    return NextResponse.json(result);
+    return NextResponse.json({ ...result, ip });
   } catch {
-    return NextResponse.json({ blocked: false });
+    return NextResponse.json({ blocked: false, ip });
   }
 }

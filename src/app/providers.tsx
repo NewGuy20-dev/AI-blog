@@ -2,12 +2,39 @@
 
 import { Auth0Provider, useUser } from '@auth0/nextjs-auth0/client';
 import { ConvexReactClient, ConvexProvider } from 'convex/react';
-import { ReactNode, useEffect, useCallback } from 'react';
+import { ReactNode, useEffect, useCallback, useState } from 'react';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 import { AccountsProvider } from '@/lib/AccountsProvider';
 import { Toaster } from 'sonner';
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+function IpBlockCheck({ children }: { children: ReactNode }) {
+  const [blocked, setBlocked] = useState<{ blocked: boolean; reason?: string } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/check-ip')
+      .then(res => res.json())
+      .then(setBlocked)
+      .catch(() => setBlocked({ blocked: false }));
+  }, []);
+
+  if (blocked === null) return null;
+
+  if (blocked.blocked) {
+    return (
+      <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+          <p className="text-gray-400">Your IP address has been blocked.</p>
+          {blocked.reason && <p className="text-gray-500 text-sm mt-2">Reason: {blocked.reason}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
 
 function ConvexAuthSync({ children }: { children: ReactNode }) {
   const { user, isLoading } = useUser();
@@ -39,12 +66,14 @@ function ConvexAuthSync({ children }: { children: ReactNode }) {
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <Auth0Provider>
-      <ConvexAuthSync>
-        <ThemeProvider>
-          <AccountsProvider>{children}</AccountsProvider>
-        </ThemeProvider>
-        <Toaster position="bottom-right" richColors />
-      </ConvexAuthSync>
+      <IpBlockCheck>
+        <ConvexAuthSync>
+          <ThemeProvider>
+            <AccountsProvider>{children}</AccountsProvider>
+          </ThemeProvider>
+          <Toaster position="bottom-right" richColors />
+        </ConvexAuthSync>
+      </IpBlockCheck>
     </Auth0Provider>
   );
 }

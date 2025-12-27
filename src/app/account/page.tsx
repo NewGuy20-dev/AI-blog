@@ -236,7 +236,7 @@ export default function AccountPage() {
                     Support access is active
                   </p>
                   <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    Expires {formatDistanceToNow(supportStatus.expiresAt, { addSuffix: true })}
+                    Expires {supportStatus.expiresAt ? formatDistanceToNow(supportStatus.expiresAt, { addSuffix: true }) : "never"}
                   </p>
                 </div>
                 <button

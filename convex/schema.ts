@@ -117,4 +117,21 @@ export default defineSchema({
     blockedAt: v.number(),
     expiresAt: v.optional(v.number()),
   }).index("by_ip", ["ip"]),
+
+  fingerprints: defineTable({
+    visitorId: v.string(),
+    userId: v.optional(v.string()),
+    userIds: v.optional(v.array(v.string())),
+    ip: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    firstSeen: v.number(),
+    lastSeen: v.number(),
+    banned: v.optional(v.boolean()),
+    banReason: v.optional(v.string()),
+    bannedAt: v.optional(v.number()),
+    autoBanned: v.optional(v.boolean()),
+  })
+    .index("by_visitorId", ["visitorId"])
+    .index("by_userId", ["userId"])
+    .index("by_banned", ["banned"]),
 });

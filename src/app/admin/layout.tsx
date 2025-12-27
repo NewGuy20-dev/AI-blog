@@ -4,7 +4,7 @@ import { useAdmin } from "@/lib/admin";
 import { useRouter } from "next/navigation";
 import { useEffect, ReactNode } from "react";
 import Link from "next/link";
-import { Terminal, LayoutDashboard, FileText, Users, Shield, HeadphonesIcon, ShieldBan } from "lucide-react";
+import { Terminal, LayoutDashboard, FileText, Users, Shield, HeadphonesIcon, ShieldBan, Fingerprint } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/support", label: "Support Access", icon: HeadphonesIcon },
   { href: "/admin/blocked-ips", label: "Blocked IPs", icon: ShieldBan },
+  { href: "/admin/fingerprints", label: "Fingerprints", icon: Fingerprint },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

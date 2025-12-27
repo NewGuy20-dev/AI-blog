@@ -17,6 +17,7 @@
     "@ai-sdk/google": "^2.0.44",
     "@auth0/nextjs-auth0": "^4.14.0",
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@fingerprintjs/fingerprintjs": "^5.0.1",
     "@types/uuid": "^10.0.0",
     "ai": "^5.0.104",
     "clsx": "^2.1.1",

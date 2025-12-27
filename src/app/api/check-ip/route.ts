@@ -9,10 +9,30 @@ export async function GET(request: Request) {
     || request.headers.get("x-real-ip")
     || "unknown";
 
+  let isVpn = false;
+  let blocked = false;
+  let reason: string | undefined;
+
+  // Check if IP is blocked in database
   try {
     const result = await convex.query(api.blockedIps.isBlocked, { ip });
-    return NextResponse.json({ ...result, ip });
-  } catch {
-    return NextResponse.json({ blocked: false, ip });
+    blocked = result.blocked;
+    reason = result.reason;
+  } catch {}
+
+  // Check VPN via ip-api.com (free, no API key needed)
+  if (!blocked) {
+    try {
+      const res = await fetch(
+        `http://ip-api.com/json/${ip}?fields=proxy,hosting`,
+        { next: { revalidate: 3600 } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        isVpn = data.proxy || data.hosting || false;
+      }
+    } catch {}
   }
+
+  return NextResponse.json({ blocked, reason, ip, isVpn });
 }

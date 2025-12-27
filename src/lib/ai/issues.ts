@@ -23,7 +23,7 @@ export const ISSUE_REGISTRY = {
     illegal_activity: { severity: 'high' as const, fixable: false },
     weapons: { severity: 'high' as const, fixable: false },
     political_persuasion: { severity: 'medium' as const, fixable: true },
-    medical_legal_advice: { severity: 'high' as const, fixable: false },
+    medical_legal_advice: { severity: 'medium' as const, fixable: true },
   },
   factual: {
     unsupported_numbers: { severity: 'medium' as const, fixable: true },

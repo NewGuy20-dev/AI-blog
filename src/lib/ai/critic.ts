@@ -68,7 +68,13 @@ export async function critiqueArticle(
     .map((r) => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`)
     .join("\n\n");
 
-  const prompt = `You are a content compliance and quality reviewer. Analyze this article against ALL criteria below.
+  const currentDate = new Date().toISOString().split('T')[0];
+  
+  const prompt = `You are a content quality reviewer for a news blog. Be LENIENT - only flag genuine issues.
+
+CURRENT DATE: ${currentDate}
+
+IMPORTANT: Only mark issues as HIGH severity if they are truly dangerous (actual hate speech, explicit violence promotion, illegal content). Normal news reporting about events is NOT a safety issue.
 
 TOPIC: "${topic}"
 
@@ -83,19 +89,20 @@ SOURCE CONTEXT (for fact-checking):
 ${context}
 
 ═══════════════════════════════════════
-CHECK EACH CATEGORY:
+CHECK EACH CATEGORY (BE LENIENT):
 ═══════════════════════════════════════
 
-⚠️ SAFETY (HIGH severity = immediate rejection)
-□ violence - Violence or graphic content
-□ hate_speech - Hate speech or slurs
-□ extremism - Extremist ideology
-□ harassment - Harassment or targeting individuals
-□ sexual_content - Sexual/adult content
-□ illegal_activity - Illegal activity promotion
-□ weapons - Weapons instructions
-□ political_persuasion - Political persuasion/propaganda (MEDIUM)
-□ medical_legal_advice - Medical or legal advice
+⚠️ SAFETY (HIGH severity = ONLY for truly dangerous content)
+NOTE: Reporting on news events is NOT a safety issue. Only flag if the article PROMOTES or INSTRUCTS harmful behavior.
+□ violence - ONLY if promoting/glorifying violence (not reporting on events)
+□ hate_speech - Actual slurs or discrimination (not discussing topics)
+□ extremism - Promoting extremist ideology
+□ harassment - Directly targeting individuals
+□ sexual_content - Explicit adult content
+□ illegal_activity - Instructions for illegal acts
+□ weapons - Instructions for making weapons
+□ political_persuasion - Heavy one-sided propaganda (MEDIUM)
+□ medical_legal_advice - Specific medical/legal advice (MEDIUM)
 
 📚 FACTUAL (MEDIUM severity = needs fixing)
 □ unsupported_numbers - Numbers without source verification

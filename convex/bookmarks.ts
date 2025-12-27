@@ -1,13 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getEffectiveUserId } from "./lib/effectiveUser";
 
 export const toggle = mutation({
-  args: { postSlug: v.string() },
+  args: { postSlug: v.string(), asUserId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
     const existing = await ctx.db
       .query("bookmarks")
       .withIndex("by_user_post", (q) => q.eq("clerkUserId", userId).eq("postSlug", args.postSlug))
@@ -28,14 +28,14 @@ export const toggle = mutation({
 });
 
 export const isBookmarked = query({
-  args: { postSlug: v.string() },
+  args: { postSlug: v.string(), asUserId: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) return false;
 
     const bookmark = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user_post", (q) => q.eq("clerkUserId", identity.subject).eq("postSlug", args.postSlug))
+      .withIndex("by_user_post", (q) => q.eq("clerkUserId", userId).eq("postSlug", args.postSlug))
       .first();
 
     return !!bookmark;
@@ -43,14 +43,14 @@ export const isBookmarked = query({
 });
 
 export const getUserBookmarks = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) return [];
 
     const bookmarks = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("clerkUserId", userId))
       .order("desc")
       .collect();
 
@@ -59,14 +59,14 @@ export const getUserBookmarks = query({
 });
 
 export const getBookmarkedPosts = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) return [];
 
     const bookmarks = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("clerkUserId", userId))
       .order("desc")
       .collect();
 
@@ -85,14 +85,14 @@ export const getBookmarkedPosts = query({
 });
 
 export const clear = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) throw new Error("Not authenticated");
 
     const bookmarks = await ctx.db
       .query("bookmarks")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("clerkUserId", userId))
       .collect();
 
     for (const bookmark of bookmarks) {
@@ -100,41 +100,5 @@ export const clear = mutation({
     }
 
     return { cleared: bookmarks.length };
-  },
-});
-
-
-// Admin: get bookmarks by userId (requires support access)
-export const getByUserId = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const HARDCODED_ADMIN_IDS = [
-      "google-oauth2|101765812180352599429",
-      
-    ];
-    
-    if (!HARDCODED_ADMIN_IDS.includes(identity.subject)) {
-      return [];
-    }
-
-    const now = Date.now();
-    const grant = await ctx.db
-      .query("supportAccess")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.and(
-        q.gt(q.field("expiresAt"), now),
-        q.eq(q.field("revokedAt"), undefined)
-      ))
-      .first();
-
-    if (!grant) return [];
-
-    return await ctx.db
-      .query("bookmarks")
-      .withIndex("by_user", (q) => q.eq("clerkUserId", args.userId))
-      .collect();
   },
 });

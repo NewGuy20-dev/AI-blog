@@ -13,6 +13,7 @@ import type * as audit from "../audit.js";
 import type * as blockedIps from "../blockedIps.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as fingerprints from "../fingerprints.js";
+import type * as lib_effectiveUser from "../lib/effectiveUser.js";
 import type * as posts from "../posts.js";
 import type * as subscribers from "../subscribers.js";
 import type * as supportAccess from "../supportAccess.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   blockedIps: typeof blockedIps;
   bookmarks: typeof bookmarks;
   fingerprints: typeof fingerprints;
+  "lib/effectiveUser": typeof lib_effectiveUser;
   posts: typeof posts;
   subscribers: typeof subscribers;
   supportAccess: typeof supportAccess;

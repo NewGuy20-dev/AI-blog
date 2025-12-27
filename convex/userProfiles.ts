@@ -1,15 +1,16 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { getEffectiveUserId } from "./lib/effectiveUser";
 
 export const get = query({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) return null;
 
     return await ctx.db
       .query("userProfiles")
-      .withIndex("by_userId", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
   },
 });
@@ -20,12 +21,13 @@ export const upsert = mutation({
     website: v.optional(v.string()),
     twitter: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
+    asUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
+    const { asUserId: _, ...data } = args;
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -34,16 +36,13 @@ export const upsert = mutation({
     const now = Date.now();
 
     if (existing) {
-      await ctx.db.patch(existing._id, {
-        ...args,
-        updatedAt: now,
-      });
+      await ctx.db.patch(existing._id, { ...data, updatedAt: now });
       return existing._id;
     }
 
     return await ctx.db.insert("userProfiles", {
       userId,
-      ...args,
+      ...data,
       createdAt: now,
       updatedAt: now,
     });
@@ -58,19 +57,19 @@ export const updatePreferences = mutation({
     reducedMotion: v.optional(v.boolean()),
     emailDigest: v.optional(v.string()),
     pushNotifications: v.optional(v.boolean()),
+    asUserId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) throw new Error("Not authenticated");
 
-    const userId = identity.subject;
+    const { asUserId: _, ...preferences } = args;
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
       .first();
 
     const now = Date.now();
-    const preferences = { ...args };
 
     if (existing) {
       await ctx.db.patch(existing._id, {
@@ -90,12 +89,11 @@ export const updatePreferences = mutation({
 });
 
 export const incrementArticlesRead = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return;
+  args: { asUserId: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const userId = await getEffectiveUserId(ctx, args.asUserId);
+    if (!userId) return;
 
-    const userId = identity.subject;
     const existing = await ctx.db
       .query("userProfiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -121,42 +119,5 @@ export const incrementArticlesRead = mutation({
         updatedAt: now,
       });
     }
-  },
-});
-
-
-// Admin: get user profile by userId (requires support access)
-export const getByUserId = query({
-  args: { userId: v.string() },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    // Check if admin has support access to this user
-    const HARDCODED_ADMIN_IDS = [
-      "google-oauth2|101765812180352599429",
-      
-    ];
-    
-    if (!HARDCODED_ADMIN_IDS.includes(identity.subject)) {
-      return null;
-    }
-
-    const now = Date.now();
-    const grant = await ctx.db
-      .query("supportAccess")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.and(
-        q.gt(q.field("expiresAt"), now),
-        q.eq(q.field("revokedAt"), undefined)
-      ))
-      .first();
-
-    if (!grant) return null;
-
-    return await ctx.db
-      .query("userProfiles")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .first();
   },
 });

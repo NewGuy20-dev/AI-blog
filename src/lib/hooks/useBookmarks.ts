@@ -5,20 +5,23 @@ import { useUser } from "@auth0/nextjs-auth0/client";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { toast } from "sonner";
+import { useImpersonation } from "@/app/providers";
 
 const STORAGE_KEY = "pageo_bookmarks";
 
 export function useBookmarks() {
   const { user, isLoading } = useUser();
+  const { isImpersonating, impersonatedUserId } = useImpersonation();
   const isSignedIn = !!user;
   const isLoaded = !isLoading;
   
   const [localBookmarks, setLocalBookmarks] = useState<string[]>([]);
 
-  const convexBookmarks = useQuery(
-    api.bookmarks.getUserBookmarks,
-    isSignedIn ? {} : "skip"
-  );
+  const queryArgs = isSignedIn 
+    ? (isImpersonating ? { asUserId: impersonatedUserId! } : {})
+    : "skip";
+
+  const convexBookmarks = useQuery(api.bookmarks.getUserBookmarks, queryArgs);
   const toggleMutation = useMutation(api.bookmarks.toggle);
   const clearMutation = useMutation(api.bookmarks.clear);
 
@@ -45,7 +48,10 @@ export function useBookmarks() {
     async (slug: string) => {
       if (isSignedIn) {
         try {
-          const result = await toggleMutation({ postSlug: slug });
+          const args = isImpersonating 
+            ? { postSlug: slug, asUserId: impersonatedUserId! }
+            : { postSlug: slug };
+          const result = await toggleMutation(args);
           toast.success(result.bookmarked ? "Bookmarked" : "Removed from bookmarks");
         } catch {
           toast.error("Failed to update bookmark");
@@ -61,7 +67,7 @@ export function useBookmarks() {
         });
       }
     },
-    [isSignedIn, toggleMutation]
+    [isSignedIn, toggleMutation, isImpersonating, impersonatedUserId]
   );
 
   const isBookmarked = useCallback(
@@ -72,7 +78,8 @@ export function useBookmarks() {
   const clear = useCallback(async () => {
     if (isSignedIn) {
       try {
-        await clearMutation({});
+        const args = isImpersonating ? { asUserId: impersonatedUserId! } : {};
+        await clearMutation(args);
         toast.success("All bookmarks cleared");
       } catch {
         toast.error("Failed to clear bookmarks");
@@ -83,7 +90,7 @@ export function useBookmarks() {
       window.dispatchEvent(new Event("bookmarks-updated"));
       toast.success("All bookmarks cleared");
     }
-  }, [isSignedIn, clearMutation]);
+  }, [isSignedIn, clearMutation, isImpersonating, impersonatedUserId]);
 
   return {
     bookmarks,

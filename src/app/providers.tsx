@@ -2,7 +2,7 @@
 
 import { Auth0Provider, useUser } from '@auth0/nextjs-auth0/client';
 import { ConvexReactClient, ConvexProvider, useMutation } from 'convex/react';
-import { ReactNode, useEffect, useCallback, useState } from 'react';
+import { ReactNode, useEffect, useCallback, useState, createContext, useContext } from 'react';
 import { ThemeProvider } from '@/lib/ThemeProvider';
 import { AccountsProvider } from '@/lib/AccountsProvider';
 import { Toaster } from 'sonner';
@@ -15,6 +15,81 @@ const BANNED_USER_IDS = [
   "google-oauth2|109465743242996396619",
   "google-oauth2|103430903957817165722",
 ];
+
+const ADMIN_USER_IDS = ["google-oauth2|101765812180352599429"];
+
+// Impersonation context
+interface ImpersonationContextType {
+  isImpersonating: boolean;
+  impersonatedUserId: string | null;
+  startImpersonation: (userId: string) => void;
+  stopImpersonation: () => void;
+  effectiveUserId: string | null;
+}
+
+const ImpersonationContext = createContext<ImpersonationContextType>({
+  isImpersonating: false,
+  impersonatedUserId: null,
+  startImpersonation: () => {},
+  stopImpersonation: () => {},
+  effectiveUserId: null,
+});
+
+export const useImpersonation = () => useContext(ImpersonationContext);
+
+function ImpersonationProvider({ children }: { children: ReactNode }) {
+  const { user } = useUser();
+  const [impersonatedUserId, setImpersonatedUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load from sessionStorage on mount
+    const stored = sessionStorage.getItem('impersonating_user');
+    if (stored && user && ADMIN_USER_IDS.includes(user.sub as string)) {
+      setImpersonatedUserId(stored);
+    }
+  }, [user]);
+
+  const startImpersonation = (userId: string) => {
+    if (user && ADMIN_USER_IDS.includes(user.sub as string)) {
+      setImpersonatedUserId(userId);
+      sessionStorage.setItem('impersonating_user', userId);
+    }
+  };
+
+  const stopImpersonation = () => {
+    setImpersonatedUserId(null);
+    sessionStorage.removeItem('impersonating_user');
+  };
+
+  const isAdmin = user && ADMIN_USER_IDS.includes(user.sub as string);
+  const isImpersonating = isAdmin && !!impersonatedUserId;
+  const effectiveUserId = isImpersonating ? impersonatedUserId : (user?.sub as string | null);
+
+  return (
+    <ImpersonationContext.Provider value={{
+      isImpersonating,
+      impersonatedUserId,
+      startImpersonation,
+      stopImpersonation,
+      effectiveUserId,
+    }}>
+      {isImpersonating && (
+        <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-black text-center py-2 text-sm font-medium z-50">
+          ⚠️ Impersonating: {impersonatedUserId?.slice(0, 30)}...
+          <button 
+            onClick={stopImpersonation}
+            className="ml-4 px-3 py-1 bg-black text-yellow-500 rounded text-xs"
+          >
+            Stop Impersonation
+          </button>
+        </div>
+      )}
+      <div className={isImpersonating ? 'pt-10' : ''}>
+        {children}
+      </div>
+    </ImpersonationContext.Provider>
+  );
+}
 
 function SecurityCheck({ children }: { children: ReactNode }) {
   const [blocked, setBlocked] = useState<{ blocked: boolean; restricted?: boolean; reason?: string; type?: string } | null>(null);
@@ -154,9 +229,11 @@ export function Providers({ children }: { children: ReactNode }) {
     <Auth0Provider>
       <SecurityCheck>
         <ConvexAuthSync>
-          <ThemeProvider>
-            <AccountsProvider>{children}</AccountsProvider>
-          </ThemeProvider>
+          <ImpersonationProvider>
+            <ThemeProvider>
+              <AccountsProvider>{children}</AccountsProvider>
+            </ThemeProvider>
+          </ImpersonationProvider>
           <Toaster position="bottom-right" richColors />
         </ConvexAuthSync>
       </SecurityCheck>

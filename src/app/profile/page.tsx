@@ -7,11 +7,18 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { SettingsLayout } from "@/components/ui/SettingsLayout";
 import { Bookmark, Calendar, BookOpen, Flame, ExternalLink, Edit2 } from "lucide-react";
+import { useImpersonation } from "@/app/providers";
 
 export default function ProfilePage() {
   const { user, isLoading } = useUser();
-  const bookmarks = useQuery(api.bookmarks.getBookmarkedPosts, user ? {} : "skip");
-  const profile = useQuery(api.userProfiles.get, user ? {} : "skip");
+  const { isImpersonating, impersonatedUserId } = useImpersonation();
+  
+  const queryArgs = user 
+    ? (isImpersonating ? { asUserId: impersonatedUserId! } : {})
+    : "skip";
+  
+  const bookmarks = useQuery(api.bookmarks.getBookmarkedPosts, queryArgs);
+  const profile = useQuery(api.userProfiles.get, queryArgs);
 
   if (isLoading) {
     return (
@@ -60,10 +67,8 @@ export default function ProfilePage() {
     <SettingsLayout>
       {/* Hero Section */}
       <div className="relative mb-16">
-        {/* Banner */}
         <div className="h-32 rounded-2xl bg-gradient-to-br from-[var(--color-primary)]/20 via-[var(--color-primary)]/10 to-transparent" />
         
-        {/* Avatar */}
         <div className="absolute -bottom-12 left-1/2 -translate-x-1/2">
           <div className="relative group">
             {user.picture ? (

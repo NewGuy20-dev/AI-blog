@@ -3,11 +3,19 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { formatDistanceToNow } from "date-fns";
-import { HeadphonesIcon, User, Clock, ExternalLink } from "lucide-react";
-import Link from "next/link";
+import { HeadphonesIcon, User, Clock, Play } from "lucide-react";
+import { useImpersonation } from "@/app/providers";
+import { useRouter } from "next/navigation";
 
 export default function AdminSupportPage() {
   const grants = useQuery(api.supportAccess.listGrantedAccess);
+  const { startImpersonation } = useImpersonation();
+  const router = useRouter();
+
+  const handleImpersonate = (userId: string) => {
+    startImpersonation(userId);
+    router.push('/feed');
+  };
 
   return (
     <div className="p-8">
@@ -17,7 +25,7 @@ export default function AdminSupportPage() {
       </div>
 
       <p className="text-gray-400 mb-6">
-        Users who have granted temporary support access to their accounts.
+        Users who have granted temporary support access. Click "Impersonate" to browse the app as them.
       </p>
 
       {!grants ? (
@@ -50,15 +58,13 @@ export default function AdminSupportPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/admin/support/${encodeURIComponent(grant.userId)}`}
-                  className="px-4 py-2 text-sm bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors flex items-center gap-2"
-                >
-                  View as User
-                  <ExternalLink size={14} />
-                </Link>
-              </div>
+              <button
+                onClick={() => handleImpersonate(grant.userId)}
+                className="px-4 py-2 text-sm bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors flex items-center gap-2"
+              >
+                <Play size={14} />
+                Impersonate
+              </button>
             </div>
           ))}
         </div>

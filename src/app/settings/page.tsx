@@ -7,6 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import { SettingsLayout } from "@/components/ui/SettingsLayout";
 import { Moon, Sun, Monitor, Bell, Globe, Eye, Type, Palette, Info } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useImpersonation } from "@/app/providers";
 
 const themeOptions = [
   { value: "light", label: "Light", icon: Sun },
@@ -31,7 +32,13 @@ const accentColors = [
 export default function SettingsPage() {
   const { theme, toggle } = useTheme();
   const { user } = useUser();
-  const profile = useQuery(api.userProfiles.get, user ? {} : "skip");
+  const { isImpersonating, impersonatedUserId } = useImpersonation();
+  
+  const queryArgs = user 
+    ? (isImpersonating ? { asUserId: impersonatedUserId! } : {})
+    : "skip";
+  
+  const profile = useQuery(api.userProfiles.get, queryArgs);
   const updatePreferences = useMutation(api.userProfiles.updatePreferences);
 
   const [selectedTheme, setSelectedTheme] = useState("system");
@@ -41,7 +48,6 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState(false);
   const [emailDigest, setEmailDigest] = useState("weekly");
 
-  // Load preferences from profile
   useEffect(() => {
     if (profile?.preferences) {
       const prefs = profile.preferences;
@@ -59,13 +65,19 @@ export default function SettingsPage() {
     if (value === "dark" && theme !== "dark") toggle();
     if (value === "light" && theme === "dark") toggle();
     if (user) {
-      updatePreferences({ theme: value });
+      const args = isImpersonating 
+        ? { theme: value, asUserId: impersonatedUserId! }
+        : { theme: value };
+      updatePreferences(args);
     }
   };
 
   const handlePreferenceChange = (key: string, value: any) => {
     if (user) {
-      updatePreferences({ [key]: value });
+      const args = isImpersonating 
+        ? { [key]: value, asUserId: impersonatedUserId! }
+        : { [key]: value };
+      updatePreferences(args);
     }
   };
 
@@ -94,7 +106,6 @@ export default function SettingsPage() {
           Appearance
         </h2>
         <div className="space-y-4">
-          {/* Theme Selector */}
           <div className="p-4 rounded-xl border border-[var(--color-border)]">
             <div className="flex items-center gap-3 mb-4">
               <Moon size={20} className="text-[var(--color-text-muted)]" />
@@ -123,7 +134,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Accent Color */}
           <div className="p-4 rounded-xl border border-[var(--color-border)]">
             <div className="flex items-center gap-3 mb-4">
               <Palette size={20} className="text-[var(--color-text-muted)]" />
@@ -151,7 +161,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Font Size */}
           <div className="p-4 rounded-xl border border-[var(--color-border)]">
             <div className="flex items-center gap-3 mb-4">
               <Type size={20} className="text-[var(--color-text-muted)]" />
@@ -182,7 +191,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Reduced Motion */}
           <div className="p-4 rounded-xl border border-[var(--color-border)] flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Eye size={20} className="text-[var(--color-text-muted)]" />

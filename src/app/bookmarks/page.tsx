@@ -8,16 +8,19 @@ import { useBookmarks } from "@/lib/hooks/useBookmarks";
 import { SettingsLayout } from "@/components/ui/SettingsLayout";
 import { Bookmark, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useImpersonation } from "@/app/providers";
 
 export default function BookmarksPage() {
   const { user } = useUser();
+  const { isImpersonating, impersonatedUserId } = useImpersonation();
   const isSignedIn = !!user;
   const { bookmarks, clear, count } = useBookmarks();
   
-  const convexPosts = useQuery(
-    api.bookmarks.getBookmarkedPosts,
-    isSignedIn ? {} : "skip"
-  );
+  const queryArgs = isSignedIn 
+    ? (isImpersonating ? { asUserId: impersonatedUserId! } : {})
+    : "skip";
+  
+  const convexPosts = useQuery(api.bookmarks.getBookmarkedPosts, queryArgs);
   
   const allPosts = useQuery(api.posts.list, !isSignedIn ? { limit: 100 } : "skip");
   

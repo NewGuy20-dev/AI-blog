@@ -6,15 +6,22 @@ const HARDCODED_ADMIN_IDS = [
   "google-oauth2|103430903957817165722",
 ];
 
+const BANNED_USER_IDS = [
+  "google-oauth2|109465743242996396619",
+];
+
 // Helper to check if user is admin
 async function isAdmin(ctx: any): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return false;
   
+  // Banned users are never admin
+  if (BANNED_USER_IDS.includes(identity.subject)) return false;
+  
   // Hardcoded admins always have access
   if (HARDCODED_ADMIN_IDS.includes(identity.subject)) return true;
   
-  // Check admins table
+  // Check admins table (but not if banned)
   const admin = await ctx.db
     .query("admins")
     .withIndex("by_userId", (q: any) => q.eq("userId", identity.subject))

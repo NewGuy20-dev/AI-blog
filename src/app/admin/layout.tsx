@@ -4,13 +4,15 @@ import { useAdmin } from "@/lib/admin";
 import { useRouter } from "next/navigation";
 import { useEffect, ReactNode } from "react";
 import Link from "next/link";
-import { Terminal, LayoutDashboard, FileText, Users, Shield } from "lucide-react";
+import { Terminal, LayoutDashboard, FileText, Users, Shield, HeadphonesIcon, ShieldBan } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/terminal", label: "Terminal", icon: Terminal },
   { href: "/admin/posts", label: "Posts", icon: FileText },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/support", label: "Support Access", icon: HeadphonesIcon },
+  { href: "/admin/blocked-ips", label: "Blocked IPs", icon: ShieldBan },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

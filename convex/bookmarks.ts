@@ -102,3 +102,39 @@ export const clear = mutation({
     return { cleared: bookmarks.length };
   },
 });
+
+
+// Admin: get bookmarks by userId (requires support access)
+export const getByUserId = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+
+    const HARDCODED_ADMIN_IDS = [
+      "google-oauth2|101765812180352599429",
+      "google-oauth2|103430903957817165722",
+    ];
+    
+    if (!HARDCODED_ADMIN_IDS.includes(identity.subject)) {
+      return [];
+    }
+
+    const now = Date.now();
+    const grant = await ctx.db
+      .query("supportAccess")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.and(
+        q.gt(q.field("expiresAt"), now),
+        q.eq(q.field("revokedAt"), undefined)
+      ))
+      .first();
+
+    if (!grant) return [];
+
+    return await ctx.db
+      .query("bookmarks")
+      .withIndex("by_user", (q) => q.eq("clerkUserId", args.userId))
+      .collect();
+  },
+});

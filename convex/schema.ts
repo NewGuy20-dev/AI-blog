@@ -99,4 +99,22 @@ export default defineSchema({
     addedAt: v.number(),
     isOriginal: v.boolean(),
   }).index("by_userId", ["userId"]),
+
+  supportAccess: defineTable({
+    userId: v.string(),
+    grantedAt: v.number(),
+    expiresAt: v.number(),
+    reason: v.optional(v.string()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_expiresAt", ["expiresAt"]),
+
+  blockedIps: defineTable({
+    ip: v.string(),
+    reason: v.optional(v.string()),
+    blockedBy: v.string(),
+    blockedAt: v.number(),
+    expiresAt: v.optional(v.number()),
+  }).index("by_ip", ["ip"]),
 });

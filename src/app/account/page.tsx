@@ -1,15 +1,22 @@
 "use client";
 
 import { useUser } from "@auth0/nextjs-auth0/client";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import Image from "next/image";
 import { SettingsLayout } from "@/components/ui/SettingsLayout";
-import { Mail, Shield, Trash2, ExternalLink, Key, Smartphone, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Mail, Shield, Trash2, ExternalLink, Key, Smartphone, Clock, CheckCircle, AlertCircle, HeadphonesIcon } from "lucide-react";
 import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
 
 export default function AccountPage() {
   const { user, isLoading } = useUser();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
+  
+  const supportStatus = useQuery(api.supportAccess.myAccessStatus);
+  const grantAccess = useMutation(api.supportAccess.grantAccess);
+  const revokeAccess = useMutation(api.supportAccess.revokeAccess);
 
   if (isLoading) {
     return (
@@ -201,6 +208,67 @@ export default function AccountPage() {
             </div>
             <span className="text-sm text-[var(--color-text-muted)]">1 active</span>
           </div>
+        </div>
+      </section>
+
+      {/* Support Access Section */}
+      <section className="mb-8">
+        <h2 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-4">
+          Support Access
+        </h2>
+        <div className="p-6 rounded-xl border border-[var(--color-border)] space-y-4">
+          <div className="flex items-start gap-3">
+            <HeadphonesIcon size={20} className="text-[var(--color-text-muted)] mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium">Allow Support Access</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                Temporarily allow our support team to access your account to help troubleshoot issues.
+              </p>
+            </div>
+          </div>
+
+          {supportStatus?.active ? (
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-600 flex items-center gap-2">
+                    <CheckCircle size={16} />
+                    Support access is active
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    Expires {formatDistanceToNow(supportStatus.expiresAt, { addSuffix: true })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => revokeAccess()}
+                  className="px-4 py-2 text-sm border border-red-500 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-colors"
+                >
+                  Revoke Access
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => grantAccess({ durationHours: 1 })}
+                className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)]/50 transition-colors"
+              >
+                Grant for 1 hour
+              </button>
+              <button
+                onClick={() => grantAccess({ durationHours: 24 })}
+                className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)]/50 transition-colors"
+              >
+                Grant for 24 hours
+              </button>
+              <button
+                onClick={() => grantAccess({ durationHours: 72 })}
+                className="px-4 py-2 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-accent)]/50 transition-colors"
+              >
+                Grant for 3 days
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

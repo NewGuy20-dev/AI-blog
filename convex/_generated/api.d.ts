@@ -10,9 +10,12 @@
 
 import type * as admin from "../admin.js";
 import type * as audit from "../audit.js";
+import type * as blockedIps from "../blockedIps.js";
 import type * as bookmarks from "../bookmarks.js";
+import type * as http from "../http.js";
 import type * as posts from "../posts.js";
 import type * as subscribers from "../subscribers.js";
+import type * as supportAccess from "../supportAccess.js";
 import type * as userProfiles from "../userProfiles.js";
 
 import type {
@@ -24,9 +27,12 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   audit: typeof audit;
+  blockedIps: typeof blockedIps;
   bookmarks: typeof bookmarks;
+  http: typeof http;
   posts: typeof posts;
   subscribers: typeof subscribers;
+  supportAccess: typeof supportAccess;
   userProfiles: typeof userProfiles;
 }>;
 

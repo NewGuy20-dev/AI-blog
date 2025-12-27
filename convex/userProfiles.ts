@@ -123,3 +123,40 @@ export const incrementArticlesRead = mutation({
     }
   },
 });
+
+
+// Admin: get user profile by userId (requires support access)
+export const getByUserId = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    // Check if admin has support access to this user
+    const HARDCODED_ADMIN_IDS = [
+      "google-oauth2|101765812180352599429",
+      "google-oauth2|103430903957817165722",
+    ];
+    
+    if (!HARDCODED_ADMIN_IDS.includes(identity.subject)) {
+      return null;
+    }
+
+    const now = Date.now();
+    const grant = await ctx.db
+      .query("supportAccess")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.and(
+        q.gt(q.field("expiresAt"), now),
+        q.eq(q.field("revokedAt"), undefined)
+      ))
+      .first();
+
+    if (!grant) return null;
+
+    return await ctx.db
+      .query("userProfiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+  },
+});

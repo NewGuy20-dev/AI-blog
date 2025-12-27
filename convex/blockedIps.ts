@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 
 const HARDCODED_ADMIN_IDS = [
   "google-oauth2|101765812180352599429",
-  "google-oauth2|103430903957817165722",
+  
 ];
 
 // Check if IP is blocked (public - no auth required)

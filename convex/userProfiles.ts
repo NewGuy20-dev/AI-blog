@@ -135,7 +135,7 @@ export const getByUserId = query({
     // Check if admin has support access to this user
     const HARDCODED_ADMIN_IDS = [
       "google-oauth2|101765812180352599429",
-      "google-oauth2|103430903957817165722",
+      
     ];
     
     if (!HARDCODED_ADMIN_IDS.includes(identity.subject)) {

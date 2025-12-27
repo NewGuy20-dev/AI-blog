@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 
 const ADMIN_USER_IDS = [
   "google-oauth2|101765812180352599429",
-  "google-oauth2|103430903957817165722",
+  
 ];
 
 const isAdmin = (userId: string) => ADMIN_USER_IDS.includes(userId);

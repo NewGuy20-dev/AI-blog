@@ -11,6 +11,7 @@ const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 const BANNED_USER_IDS = [
   "google-oauth2|109465743242996396619",
+  "google-oauth2|103430903957817165722",
 ];
 
 function IpBlockCheck({ children }: { children: ReactNode }) {

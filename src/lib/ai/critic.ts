@@ -3,13 +3,27 @@ import { z } from "zod";
 import { criticModel } from "./config";
 import { Article, ArticleSchema } from "../schemas/article";
 import { SearchResult } from "./search";
-import { CriticIssue, CriticIssueSchema, determineDecision, getFixableIssues, getHighSeverityIssues } from "./issues";
+import { CriticIssue, CriticIssueSchema, ISSUE_REGISTRY, determineDecision, getFixableIssues, getHighSeverityIssues } from "./issues";
 
 const CriticResultSchema = z.object({
   issues: z.array(CriticIssueSchema),
   confidence_score: z.number().min(0).max(1),
   final_article: ArticleSchema,
 });
+
+export interface CheckResult {
+  name: string;
+  passed: boolean;
+  issue?: CriticIssue;
+}
+
+export interface CategoryCheckResults {
+  safety: CheckResult[];
+  factual: CheckResult[];
+  quality: CheckResult[];
+  seo: CheckResult[];
+  compliance: CheckResult[];
+}
 
 export interface CriticResult {
   issues: CriticIssue[];
@@ -18,6 +32,31 @@ export interface CriticResult {
   fixable_issues: CriticIssue[];
   confidence_score: number;
   final_article: Article;
+  checkResults: CategoryCheckResults;
+}
+
+function buildCheckResults(issues: CriticIssue[]): CategoryCheckResults {
+  const results: CategoryCheckResults = {
+    safety: [],
+    factual: [],
+    quality: [],
+    seo: [],
+    compliance: [],
+  };
+
+  for (const [category, checks] of Object.entries(ISSUE_REGISTRY)) {
+    const cat = category as keyof CategoryCheckResults;
+    for (const checkName of Object.keys(checks)) {
+      const issue = issues.find(i => i.category === cat && i.subcategory === checkName);
+      results[cat].push({
+        name: checkName,
+        passed: !issue,
+        issue,
+      });
+    }
+  }
+
+  return results;
 }
 
 export async function critiqueArticle(
@@ -118,5 +157,6 @@ Also provide:
     fixable_issues: getFixableIssues(issues),
     confidence_score: result.object.confidence_score,
     final_article: result.object.final_article,
+    checkResults: buildCheckResults(issues),
   };
 }

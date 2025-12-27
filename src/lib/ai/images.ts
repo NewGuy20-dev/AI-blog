@@ -3,14 +3,23 @@ import { FeaturedImage } from "../schemas/image";
 const OPENVERSE_API = "https://api.openverse.org/v1";
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getAccessToken(): Promise<string | null> {
+export interface ImageSearchResult {
+  image: FeaturedImage | null;
+  error?: string;
+  source: "openverse" | "fallback";
+}
+
+async function getAccessToken(): Promise<{ token: string | null; error?: string }> {
   if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.token;
+    return { token: cachedToken.token };
   }
 
   const clientId = process.env.OPENVERSE_CLIENT_ID;
   const clientSecret = process.env.OPENVERSE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
+  
+  if (!clientId || !clientSecret) {
+    return { token: null, error: "Missing OPENVERSE_CLIENT_ID or OPENVERSE_CLIENT_SECRET" };
+  }
 
   try {
     const res = await fetch(`${OPENVERSE_API}/auth_tokens/token/`, {
@@ -23,22 +32,25 @@ async function getAccessToken(): Promise<string | null> {
       }),
     });
 
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return { token: null, error: `Auth failed: ${res.status}` };
+    }
+    
     const data = await res.json();
     cachedToken = {
       token: data.access_token,
       expiresAt: Date.now() + (data.expires_in - 60) * 1000,
     };
-    return cachedToken.token;
-  } catch {
-    return null;
+    return { token: cachedToken.token };
+  } catch (e) {
+    return { token: null, error: `Auth error: ${e instanceof Error ? e.message : "unknown"}` };
   }
 }
 
 async function fetchOpenverseImage(
   query: string,
   token: string | null
-): Promise<FeaturedImage | null> {
+): Promise<{ image: FeaturedImage | null; error?: string }> {
   try {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -52,38 +64,40 @@ async function fetchOpenverseImage(
 
     const res = await fetch(`${OPENVERSE_API}/images/?${params}`, { headers });
     
-    // Handle rate limiting
     if (res.status === 429) {
-      console.warn("Openverse rate limited");
-      return null;
+      return { image: null, error: "Rate limited" };
     }
     
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return { image: null, error: `API error: ${res.status}` };
+    }
 
     const data = await res.json();
-    if (!data.results?.length) return null;
+    if (!data.results?.length) {
+      return { image: null, error: "No results" };
+    }
 
-    // Pick the best image (prefer larger images)
     const img = data.results.find((r: { width?: number }) => r.width && r.width >= 800) || data.results[0];
     
     return {
-      url: img.url,
-      alt: img.title || query,
-      attribution: {
-        creator: img.creator || undefined,
-        creatorUrl: img.creator_url || undefined,
-        license: img.license?.toUpperCase() || "CC",
-        licenseUrl: img.license_url || undefined,
-        source: img.source || "Openverse",
-        sourceUrl: img.foreign_landing_url || img.url,
+      image: {
+        url: img.url,
+        alt: img.title || query,
+        attribution: {
+          creator: img.creator || undefined,
+          creatorUrl: img.creator_url || undefined,
+          license: img.license?.toUpperCase() || "CC",
+          licenseUrl: img.license_url || undefined,
+          source: img.source || "Openverse",
+          sourceUrl: img.foreign_landing_url || img.url,
+        },
       },
     };
-  } catch {
-    return null;
+  } catch (e) {
+    return { image: null, error: `Fetch error: ${e instanceof Error ? e.message : "unknown"}` };
   }
 }
 
-// Category-based fallback images (using Unsplash Source - free to use)
 const CATEGORY_FALLBACKS: Record<string, string> = {
   technology: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
   business: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
@@ -119,23 +133,34 @@ export async function searchImage(
   query: string,
   category?: string,
   tags?: string[]
-): Promise<FeaturedImage | null> {
-  const token = await getAccessToken();
+): Promise<ImageSearchResult> {
+  const { token, error: authError } = await getAccessToken();
+  
+  if (authError) {
+    return { image: getFallbackImage(category || tags?.[0]), error: authError, source: "fallback" };
+  }
 
-  // Try multiple search strategies
   const searchQueries = [
     query,
     tags?.length ? `${query} ${tags[0]}` : null,
     category ? `${category} news` : null,
   ].filter(Boolean) as string[];
 
+  const errors: string[] = [];
+  
   for (const q of searchQueries) {
     const result = await fetchOpenverseImage(q, token);
-    if (result) return result;
+    if (result.image) {
+      return { image: result.image, source: "openverse" };
+    }
+    if (result.error) errors.push(`"${q}": ${result.error}`);
   }
 
-  // Return category fallback if all searches fail
-  return getFallbackImage(category || tags?.[0]);
+  return {
+    image: getFallbackImage(category || tags?.[0]),
+    error: errors.join("; "),
+    source: "fallback",
+  };
 }
 
 export { getFallbackImage };

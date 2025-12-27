@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { Clock } from "lucide-react";
 
@@ -10,15 +11,25 @@ interface FeaturedCardProps {
     publishedAt: number;
     readingTime: number;
     tags: string[];
+    featuredImage?: { url: string; alt: string } | null;
   };
 }
 
 export function FeaturedCard({ post }: FeaturedCardProps) {
   return (
     <Link href={`/posts/${post.slug}`} className="block group">
-      <article className="p-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl text-white relative overflow-hidden">
+      <article className="relative rounded-2xl text-white overflow-hidden min-h-[280px]">
+        {post.featuredImage?.url ? (
+          <Image
+            src={post.featuredImage.url}
+            alt={post.featuredImage.alt || post.title}
+            fill
+            className="object-cover"
+          />
+        ) : null}
+        <div className={`absolute inset-0 ${post.featuredImage?.url ? "bg-gradient-to-t from-black/80 via-black/40 to-black/20" : "bg-gradient-to-br from-indigo-500 to-purple-600"}`} />
         <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors" />
-        <div className="relative z-10">
+        <div className="relative z-10 p-8 flex flex-col justify-end h-full">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-xs font-semibold bg-white/20 px-3 py-1 rounded-full">
               Featured

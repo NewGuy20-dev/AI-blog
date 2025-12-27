@@ -8,6 +8,7 @@
 
 - **Framework**: Next.js 16 (App Router), React 19, TypeScript
 - **Database**: Convex (serverless)
+- **Authentication**: Auth0
 - **AI**: Google Gemini 2.5 Flash Lite via `@ai-sdk/google`
 - **Search**: Tavily API
 - **Styling**: Tailwind CSS 4 with CSS variables

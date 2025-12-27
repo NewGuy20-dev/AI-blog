@@ -12,17 +12,17 @@ export async function runPipeline() {
   const runId = uuidv4();
 
   try {
-    // 0. Discover topic dynamically via Tavily
+    // 0. Discover topic
     await log(runId, "discovery", "started");
     const { topic: actualTopic, results: tavilyResults } = await extractTopicFromTavily();
     await log(runId, "discovery", "success", undefined, { topic: actualTopic });
 
-    // 1. Search for more context if needed
+    // 1. Search for context
     await log(runId, "search", "started", { topic: actualTopic });
     const searchResults = tavilyResults.length > 0 
       ? tavilyResults.map(r => ({ ...r, publishedDate: undefined }))
       : await searchNews(actualTopic);
-    await log(runId, "search", "success", { topic: actualTopic }, searchResults);
+    await log(runId, "search", "success", { topic: actualTopic }, { count: searchResults.length });
 
     // 2. Refine article (generate + critique loop)
     await log(runId, "refinement", "started", { contextSize: searchResults.length });
@@ -35,6 +35,9 @@ export async function runPipeline() {
         issueCount: critique.issues.length,
         highSeverity: critique.high_severity_issues.length,
         fixable: critique.fixable_issues.length,
+      }, {
+        issues: critique.issues,
+        checkResults: critique.checkResults,
       });
     });
 
@@ -43,12 +46,17 @@ export async function runPipeline() {
       history: result.history,
     });
 
-    // 3. Handle result based on status
+    // 3. Handle result
     if (result.status === 'published' && result.article) {
-      // Fetch CC/PD image for the article
-      await log(runId, "image", "started", { topic: actualTopic });
-      const featuredImage = await searchImage(actualTopic);
-      await log(runId, "image", featuredImage ? "success" : "skipped", { hasImage: !!featuredImage });
+      const category = result.article.tags[0];
+      
+      await log(runId, "image", "started", { topic: actualTopic, category });
+      const imageResult = await searchImage(actualTopic, category, result.article.tags);
+      await log(runId, "image", imageResult.image ? "success" : "fallback", {
+        source: imageResult.source,
+        error: imageResult.error,
+        hasImage: !!imageResult.image,
+      });
 
       await convex.mutation(api.posts.create, {
         slug: result.article.slug,
@@ -60,7 +68,7 @@ export async function runPipeline() {
         status: "published",
         publishedAt: Date.now(),
         readingTime: result.article.readingTime || 5,
-        featuredImage: featuredImage || undefined,
+        featuredImage: imageResult.image || undefined,
       });
       await log(runId, "save", "success", { slug: result.article.slug, status: "published" });
     } else if (result.status === 'draft' && result.article) {

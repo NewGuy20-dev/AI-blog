@@ -1,15 +1,18 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-const ORIGINAL_ADMIN_ID = "google-oauth2|101765812180352599429";
+const HARDCODED_ADMIN_IDS = [
+  "google-oauth2|101765812180352599429",
+  "google-oauth2|103430903957817165722",
+];
 
 // Helper to check if user is admin
 async function isAdmin(ctx: any): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return false;
   
-  // Original admin always has access
-  if (identity.subject === ORIGINAL_ADMIN_ID) return true;
+  // Hardcoded admins always have access
+  if (HARDCODED_ADMIN_IDS.includes(identity.subject)) return true;
   
   // Check admins table
   const admin = await ctx.db
@@ -144,10 +147,12 @@ export const listAdmins = query({
     await requireAdmin(ctx);
     
     const admins = await ctx.db.query("admins").collect();
-    return [
-      { userId: ORIGINAL_ADMIN_ID, isOriginal: true, addedAt: 0 },
-      ...admins,
-    ];
+    const hardcodedAdmins = HARDCODED_ADMIN_IDS.map(id => ({
+      userId: id,
+      isOriginal: true,
+      addedAt: 0,
+    }));
+    return [...hardcodedAdmins, ...admins];
   },
 });
 
@@ -157,9 +162,9 @@ export const addAdmin = mutation({
   handler: async (ctx, args) => {
     const identity = await requireAdmin(ctx);
     
-    // Check if already admin
-    if (args.userId === ORIGINAL_ADMIN_ID) {
-      return { success: false, message: "User is already the original admin" };
+    // Check if already hardcoded admin
+    if (HARDCODED_ADMIN_IDS.includes(args.userId)) {
+      return { success: false, message: "User is already a hardcoded admin" };
     }
     
     const existing = await ctx.db
@@ -188,9 +193,9 @@ export const removeAdmin = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     
-    // Cannot remove original admin
-    if (args.userId === ORIGINAL_ADMIN_ID) {
-      return { success: false, message: "Cannot remove the original admin" };
+    // Cannot remove hardcoded admins
+    if (HARDCODED_ADMIN_IDS.includes(args.userId)) {
+      return { success: false, message: "Cannot remove a hardcoded admin" };
     }
     
     const admin = await ctx.db

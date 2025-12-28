@@ -59,7 +59,7 @@ function ImpersonationProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = user && ADMIN_USER_IDS.includes(user.sub as string);
-  const isImpersonating = isAdmin && !!impersonatedUserId;
+  const isImpersonating = !!isAdmin && !!impersonatedUserId;
   const effectiveUserId = isImpersonating ? impersonatedUserId : (user?.sub as string | null);
 
   return (

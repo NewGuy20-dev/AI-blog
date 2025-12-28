@@ -11,10 +11,7 @@ import { api } from '../../convex/_generated/api';
 
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-const BANNED_USER_IDS = [
-  "google-oauth2|109465743242996396619",
-  "google-oauth2|103430903957817165722",
-];
+const BANNED_USER_IDS: string[] = [];
 
 const ADMIN_USER_IDS = ["google-oauth2|101765812180352599429"];
 
@@ -93,10 +90,19 @@ function ImpersonationProvider({ children }: { children: ReactNode }) {
 
 function SecurityCheck({ children }: { children: ReactNode }) {
   const [blocked, setBlocked] = useState<{ blocked: boolean; restricted?: boolean; reason?: string; type?: string } | null>(null);
-  const { user } = useUser();
+  const { user, isLoading } = useUser();
 
   useEffect(() => {
     async function checkSecurity() {
+      // Wait for auth to load, then check if admin
+      if (isLoading) return;
+      
+      // Admins bypass all security checks
+      if (user && ADMIN_USER_IDS.includes(user.sub as string)) {
+        setBlocked({ blocked: false });
+        return;
+      }
+
       try {
         // Check IP block and VPN
         const ipRes = await fetch('/api/check-ip');
@@ -148,9 +154,10 @@ function SecurityCheck({ children }: { children: ReactNode }) {
     }
 
     checkSecurity();
-  }, [user]);
+  }, [user, isLoading]);
 
-  if (blocked === null) return null;
+  // Show nothing while loading auth
+  if (isLoading || blocked === null) return null;
 
   if (blocked.blocked) {
     return (

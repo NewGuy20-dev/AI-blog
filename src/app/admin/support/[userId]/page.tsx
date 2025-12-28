@@ -3,17 +3,19 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, User, Bookmark, Settings } from "lucide-react";
+import { AlertTriangle, ArrowLeft, User, Bookmark, Settings, Eye } from "lucide-react";
 import Link from "next/link";
+import { useImpersonation } from "@/app/providers";
 
 export default function ImpersonateUserPage() {
   const params = useParams();
   const router = useRouter();
+  const { startImpersonation } = useImpersonation();
   const userId = decodeURIComponent(params.userId as string);
   
   const canAccess = useQuery(api.supportAccess.canAccessUser, { targetUserId: userId });
-  const userProfile = useQuery(api.userProfiles.getByUserId, { userId });
-  const userBookmarks = useQuery(api.bookmarks.getByUserId, { userId });
+  const userProfile = useQuery(api.userProfiles.get, canAccess ? { asUserId: userId } : "skip");
+  const userBookmarks = useQuery(api.bookmarks.getUserBookmarks, canAccess ? { asUserId: userId } : "skip");
 
   if (canAccess === false) {
     return (
@@ -24,10 +26,7 @@ export default function ImpersonateUserPage() {
           <p className="text-gray-400 mb-6">
             This user has not granted support access or their access has expired.
           </p>
-          <Link
-            href="/admin/support"
-            className="text-green-400 hover:underline"
-          >
+          <Link href="/admin/support" className="text-green-400 hover:underline">
             ← Back to Support Access
           </Link>
         </div>
@@ -36,12 +35,13 @@ export default function ImpersonateUserPage() {
   }
 
   if (canAccess === undefined) {
-    return (
-      <div className="p-8">
-        <div className="text-gray-500">Verifying access...</div>
-      </div>
-    );
+    return <div className="p-8 text-gray-500">Verifying access...</div>;
   }
+
+  const handleImpersonate = () => {
+    startImpersonation(userId);
+    router.push("/feed");
+  };
 
   return (
     <div className="p-8">
@@ -50,29 +50,34 @@ export default function ImpersonateUserPage() {
           onClick={() => router.back()}
           className="text-gray-400 hover:text-white flex items-center gap-2 mb-4"
         >
-          <ArrowLeft size={16} />
-          Back
+          <ArrowLeft size={16} /> Back
         </button>
         
         <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-6">
           <p className="text-yellow-500 text-sm flex items-center gap-2">
             <AlertTriangle size={16} />
-            You are viewing this account with support access. All actions are logged.
+            You are viewing this account with support access.
           </p>
         </div>
 
-        <h1 className="text-2xl font-bold flex items-center gap-3">
-          <User className="text-green-500" />
-          User: {userId.slice(0, 30)}...
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <User className="text-green-500" />
+            User: {userId.slice(0, 30)}...
+          </h1>
+          <button
+            onClick={handleImpersonate}
+            className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-lg font-medium hover:bg-yellow-400"
+          >
+            <Eye size={16} /> Browse as User
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6">
-        {/* Profile Info */}
         <section className="p-6 bg-[#161b22] rounded-lg border border-[#30363d]">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Settings size={18} />
-            Profile
+            <Settings size={18} /> Profile
           </h2>
           {userProfile ? (
             <div className="space-y-3 text-sm">
@@ -98,18 +103,14 @@ export default function ImpersonateUserPage() {
           )}
         </section>
 
-        {/* Bookmarks */}
         <section className="p-6 bg-[#161b22] rounded-lg border border-[#30363d]">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Bookmark size={18} />
-            Bookmarks ({userBookmarks?.length || 0})
+            <Bookmark size={18} /> Bookmarks ({userBookmarks?.length || 0})
           </h2>
           {userBookmarks && userBookmarks.length > 0 ? (
             <ul className="space-y-2 text-sm">
-              {userBookmarks.map((b: any) => (
-                <li key={b._id} className="text-gray-300">
-                  {b.postSlug}
-                </li>
+              {userBookmarks.map((slug: string) => (
+                <li key={slug} className="text-gray-300">{slug}</li>
               ))}
             </ul>
           ) : (

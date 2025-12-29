@@ -125,6 +125,8 @@ export default defineSchema({
     ip: v.optional(v.string()),
     ipAddresses: v.optional(v.array(v.string())),
     userAgent: v.optional(v.string()),
+    serverFingerprint: v.optional(v.string()),
+    spoofAttempts: v.optional(v.number()),
     firstSeen: v.number(),
     lastSeen: v.number(),
     loginTimes: v.optional(v.array(v.number())),

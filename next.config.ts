@@ -48,9 +48,7 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
   turbopack: {},
-  experimental: {
-    serverComponentsExternalPackages: ['@auth0/nextjs-auth0'],
-  },
+  serverExternalPackages: ['@auth0/nextjs-auth0'],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.openverse.org" },

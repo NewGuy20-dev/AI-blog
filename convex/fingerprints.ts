@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 const HARDCODED_ADMIN_IDS = ["google-oauth2|101765812180352599429"];
+const BANNED_USER_IDS = ["google-oauth2|103430903957817165722"];
 
 interface RiskFactors {
   fingerprintReused: boolean;
@@ -9,6 +10,8 @@ interface RiskFactors {
   sameIpRange: boolean;
   abnormalBehavior: boolean;
   automationSignals: boolean;
+  spoofingDetected: boolean;
+  serverFpMismatch: boolean;
 }
 
 function calculateRiskScore(factors: RiskFactors): number {
@@ -18,6 +21,8 @@ function calculateRiskScore(factors: RiskFactors): number {
   if (factors.sameIpRange) score += 1;
   if (factors.abnormalBehavior) score += 2;
   if (factors.automationSignals) score += 3;
+  if (factors.spoofingDetected) score += 4;
+  if (factors.serverFpMismatch) score += 3;
   return score;
 }
 
@@ -28,8 +33,24 @@ export const track = mutation({
     userId: v.optional(v.string()),
     ip: v.optional(v.string()),
     userAgent: v.optional(v.string()),
+    serverFingerprint: v.optional(v.string()),
+    spoofReasons: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
+    // Check if user is in banned list
+    if (args.userId && BANNED_USER_IDS.includes(args.userId)) {
+      return { banned: true, restricted: false, reason: "Account banned", riskScore: 10 };
+    }
+
+    // Verify JWT if userId provided
+    if (args.userId) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity || identity.subject !== args.userId) {
+        // JWT mismatch - someone trying to spoof userId
+        return { banned: true, restricted: false, reason: "Auth mismatch", riskScore: 10 };
+      }
+    }
+
     const now = Date.now();
     const existing = await ctx.db
       .query("fingerprints")
@@ -37,6 +58,11 @@ export const track = mutation({
       .first();
 
     if (existing) {
+      // Check server fingerprint mismatch (cookie editor detection)
+      const serverFpMismatch = args.serverFingerprint && 
+        (existing as any).serverFingerprint && 
+        args.serverFingerprint !== (existing as any).serverFingerprint;
+
       // Track unique user IDs and login times
       let userIds: string[] = (existing as any).userIds || [];
       let loginTimes: number[] = (existing as any).loginTimes || [];
@@ -71,12 +97,17 @@ export const track = mutation({
       const veryRecentLogins = loginTimes.filter(t => now - t < 10 * 1000);
       const automationSignals = veryRecentLogins.length >= 5;
 
+      // Spoofing detected from server-side checks
+      const spoofingDetected = (args.spoofReasons?.length || 0) >= 2;
+
       const riskScore = calculateRiskScore({
         fingerprintReused,
         rapidSwitching,
         sameIpRange,
         abnormalBehavior,
         automationSignals,
+        spoofingDetected,
+        serverFpMismatch: !!serverFpMismatch,
       });
 
       // Determine action based on risk score
@@ -85,12 +116,19 @@ export const track = mutation({
       let banReason = existing.banReason;
       let restrictedUntil = (existing as any).restrictedUntil;
 
-      if (!banned && riskScore >= 8) {
+      // Lower threshold for banning if spoofing detected
+      const banThreshold = spoofingDetected || serverFpMismatch ? 5 : 8;
+      
+      if (!banned && riskScore >= banThreshold) {
         banned = true;
-        banReason = `Auto-banned: Risk score ${riskScore} (${userIds.length} accounts)`;
+        banReason = spoofingDetected 
+          ? `Auto-banned: Spoofing detected (${args.spoofReasons?.join(", ")})`
+          : serverFpMismatch
+          ? `Auto-banned: Cookie manipulation detected`
+          : `Auto-banned: Risk score ${riskScore} (${userIds.length} accounts)`;
       } else if (!banned && !restricted && riskScore >= 6) {
         restricted = true;
-        restrictedUntil = now + 30 * 60 * 1000; // 30 min restriction
+        restrictedUntil = now + 30 * 60 * 1000;
       }
 
       await ctx.db.patch(existing._id, {
@@ -102,6 +140,8 @@ export const track = mutation({
         loginTimes,
         ipAddresses,
         riskScore,
+        serverFingerprint: args.serverFingerprint || (existing as any).serverFingerprint,
+        spoofAttempts: spoofingDetected ? ((existing as any).spoofAttempts || 0) + 1 : (existing as any).spoofAttempts,
         ...(banned && !existing.banned ? { banned: true, banReason, bannedAt: now, autoBanned: true } : {}),
         ...(restricted ? { restricted, restrictedUntil } : {}),
       });

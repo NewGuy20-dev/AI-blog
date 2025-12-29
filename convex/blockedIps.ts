@@ -1,10 +1,37 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 
 const HARDCODED_ADMIN_IDS = [
   "google-oauth2|101765812180352599429",
   
 ];
+
+// Internal: block IP without auth (for CLI/scripts)
+export const blockIpInternal = internalMutation({
+  args: {
+    ip: v.string(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("blockedIps")
+      .withIndex("by_ip", (q) => q.eq("ip", args.ip))
+      .first();
+
+    if (existing) {
+      return { success: false, message: "IP already blocked" };
+    }
+
+    await ctx.db.insert("blockedIps", {
+      ip: args.ip,
+      reason: args.reason || "Manual ban",
+      blockedBy: "system",
+      blockedAt: Date.now(),
+    });
+
+    return { success: true, message: `Blocked IP: ${args.ip}` };
+  },
+});
 
 // Check if IP is blocked (public - no auth required)
 export const isBlocked = query({

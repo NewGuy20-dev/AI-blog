@@ -5,7 +5,9 @@ const HARDCODED_ADMIN_IDS = [
   "google-oauth2|101765812180352599429",
 ];
 
-const BANNED_USER_IDS: string[] = [];
+const BANNED_USER_IDS: string[] = [
+  "google-oauth2|103430903957817165722",
+];
 
 // Helper to check if user is admin
 async function isAdmin(ctx: any): Promise<boolean> {

@@ -7,16 +7,16 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Testing cron job at ${PROD_URL}/api/run-job...`);
+  console.log(`Testing Gemma pipeline at ${PROD_URL}/api/generate-gemma...`);
 
   try {
-    const response = await fetch(`${PROD_URL}/api/run-job`, {
+    const response = await fetch(`${PROD_URL}/api/generate-gemma`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${CRON_SECRET}`,
         "Content-Type": "application/json",
       },
-      body: "{}",
+      body: JSON.stringify({ topic: "Latest AI and technology news" }),
     });
 
     const data = await response.json();
@@ -27,10 +27,10 @@ async function main() {
     }
 
     console.log("✅ Success!");
-    console.log("Topic:", data.topic);
-    console.log("Status:", data.status);
-    console.log("Timestamp:", data.timestamp);
-    console.log("Run ID:", data.runId);
+    console.log("Title:", data.article?.title);
+    console.log("Slug:", data.article?.slug);
+    console.log("Metrics:", data.metrics);
+    console.log("Quota:", data.quota);
   } catch (error: any) {
     console.error("Error:", error.message);
     process.exit(1);

@@ -1,8 +1,8 @@
-name: Hourly AI News Pipeline
+name: AI News Pipeline (Every 15 mins)
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -19,7 +19,7 @@ jobs:
             exit 1
           fi
           
-          API_URL="${PROD_URL}/api/run-job"
+          API_URL="${PROD_URL}/api/generate-gemma"
           echo "Calling: $API_URL"
           
           for attempt in 1 2 3; do
@@ -29,7 +29,7 @@ jobs:
               -X POST "$API_URL" \
               -H "Authorization: Bearer $CRON_SECRET" \
               -H "Content-Type: application/json" \
-              -d '{}')
+              -d '{"topic": "Latest trending news"}')
             
             echo "Response code: $HTTP_CODE"
             cat response.txt

@@ -251,9 +251,11 @@ export function Providers({ children }: { children: ReactNode }) {
     setMounted(true);
   }, []);
 
-  // During SSR/prerendering, render children without providers
+  // During SSR/prerendering, show minimal loading state
   if (!mounted) {
-    return <>{children}</>;
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#0d1117' }} />
+    );
   }
 
   return (

@@ -56,6 +56,31 @@ async function requireAdmin(ctx: any) {
   throw new Error("Not authenticated");
 }
 
+// Seed initial admin (run once)
+export const seedAdmin = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const adminId = "google-oauth2|101765812180352599429";
+    
+    // Check if already exists
+    const existing = await ctx.db
+      .query("admins")
+      .withIndex("by_userId", (q: any) => q.eq("userId", adminId))
+      .first();
+    
+    if (existing) return { success: true, message: "Admin already exists" };
+    
+    await ctx.db.insert("admins", {
+      userId: adminId,
+      addedBy: "system",
+      addedAt: Date.now(),
+      isOriginal: true,
+    });
+    
+    return { success: true, message: "Admin seeded" };
+  },
+});
+
 // Check if current user is admin
 export const checkAdmin = query({
   args: {},

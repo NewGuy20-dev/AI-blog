@@ -15,6 +15,7 @@ import type * as bookmarks from "../bookmarks.js";
 import type * as fingerprints from "../fingerprints.js";
 import type * as lib_effectiveUser from "../lib/effectiveUser.js";
 import type * as posts from "../posts.js";
+import type * as security from "../security.js";
 import type * as subscribers from "../subscribers.js";
 import type * as supportAccess from "../supportAccess.js";
 import type * as userProfiles from "../userProfiles.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   fingerprints: typeof fingerprints;
   "lib/effectiveUser": typeof lib_effectiveUser;
   posts: typeof posts;
+  security: typeof security;
   subscribers: typeof subscribers;
   supportAccess: typeof supportAccess;
   userProfiles: typeof userProfiles;

@@ -3,8 +3,6 @@ import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import ServiceWorkerRegistration from "./components/ServiceWorkerRegistration";
-import { ThemeProvider } from "@/lib/ThemeProvider";
-import { Toaster } from "sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -54,10 +52,7 @@ export default function RootLayout({
         className={`${inter.variable} ${sourceSerif.variable} antialiased font-sans`}
       >
         <ServiceWorkerRegistration />
-        <Providers>
-          <ThemeProvider>{children}</ThemeProvider>
-          <Toaster position="bottom-right" richColors />
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

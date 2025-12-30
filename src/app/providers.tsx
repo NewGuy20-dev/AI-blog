@@ -239,6 +239,17 @@ function ConvexAuthSync({ children }: { children: ReactNode }) {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // During SSR/prerendering, render children without providers
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
   return (
     <Auth0Provider>
       <SecurityCheck>

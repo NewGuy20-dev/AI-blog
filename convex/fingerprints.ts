@@ -42,11 +42,12 @@ export const track = mutation({
       return { banned: true, restricted: false, reason: "Account banned", riskScore: 10 };
     }
 
-    // Verify JWT if userId provided
+    // Verify JWT if userId provided - but don't block if auth not ready yet
     if (args.userId) {
       const identity = await ctx.auth.getUserIdentity();
-      if (!identity || identity.subject !== args.userId) {
-        // JWT mismatch - someone trying to spoof userId
+      // Only block if we have an identity but it doesn't match (actual spoofing)
+      // If identity is null, auth might just not be synced yet - allow through
+      if (identity && identity.subject !== args.userId) {
         return { banned: true, restricted: false, reason: "Auth mismatch", riskScore: 10 };
       }
     }

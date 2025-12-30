@@ -141,4 +141,57 @@ export default defineSchema({
     .index("by_visitorId", ["visitorId"])
     .index("by_userId", ["userId"])
     .index("by_banned", ["banned"]),
+
+  blacklistedTokens: defineTable({
+    tokenId: v.string(),
+    userId: v.string(),
+    reason: v.string(),
+    blacklistedAt: v.number(),
+    expiresAt: v.optional(v.number()),
+  }).index("by_tokenId", ["tokenId"]),
+
+  securityEvents: defineTable({
+    eventType: v.string(),
+    userId: v.optional(v.string()),
+    ip: v.optional(v.string()),
+    fingerprint: v.optional(v.string()),
+    details: v.optional(v.any()),
+    severity: v.string(),
+    timestamp: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_eventType", ["eventType"])
+    .index("by_timestamp", ["timestamp"]),
+
+  trustedDevices: defineTable({
+    userId: v.string(),
+    fingerprint: v.string(),
+    name: v.optional(v.string()),
+    addedAt: v.number(),
+    lastUsed: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_fingerprint", ["fingerprint"]),
+
+  bannedHardware: defineTable({
+    hardwareFingerprint: v.string(),
+    reason: v.string(),
+    bannedAt: v.number(),
+    bannedBy: v.string(),
+  }).index("by_fingerprint", ["hardwareFingerprint"]),
+
+  emergencyLockdown: defineTable({
+    active: v.boolean(),
+    activatedAt: v.number(),
+    activatedBy: v.string(),
+    reason: v.string(),
+    deactivatedAt: v.optional(v.number()),
+  }).index("by_active", ["active"]),
+
+  rateLimitSettings: defineTable({
+    endpoint: v.string(),
+    maxRequests: v.number(),
+    windowMs: v.number(),
+    updatedAt: v.number(),
+  }).index("by_endpoint", ["endpoint"]),
 });

@@ -7,14 +7,23 @@ import Link from "next/link";
 import { useUser } from "@auth0/nextjs-auth0/client";
 
 export default function AdminDashboard() {
-  const { isLoading: authLoading } = useUser();
-  const stats = useQuery(api.admin.getStats);
-  const recentPosts = useQuery(api.admin.listPosts, { limit: 5 });
+  const { user, isLoading: authLoading } = useUser();
+  const isAdmin = useQuery(api.admin.checkAdmin, authLoading || !user ? "skip" : {});
+  const stats = useQuery(api.admin.getStats, isAdmin !== true ? "skip" : {});
+  const recentPosts = useQuery(api.admin.listPosts, isAdmin !== true ? "skip" : { limit: 5 });
 
-  if (authLoading) {
+  if (authLoading || isAdmin === undefined) {
     return (
       <div className="p-8">
         <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="p-8">
+        <div className="text-red-500">Access denied. You are not an admin.</div>
       </div>
     );
   }

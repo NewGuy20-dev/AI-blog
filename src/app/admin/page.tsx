@@ -4,10 +4,20 @@ import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { FileText, Users, Bookmark, Shield, Activity } from "lucide-react";
 import Link from "next/link";
+import { useUser } from "@auth0/nextjs-auth0/client";
 
 export default function AdminDashboard() {
+  const { isLoading: authLoading } = useUser();
   const stats = useQuery(api.admin.getStats);
   const recentPosts = useQuery(api.admin.listPosts, { limit: 5 });
+
+  if (authLoading) {
+    return (
+      <div className="p-8">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">

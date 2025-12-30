@@ -207,6 +207,7 @@ function SecurityCheck({ children }: { children: ReactNode }) {
 
 function ConvexAuthSync({ children }: { children: ReactNode }) {
   const { user, isLoading } = useUser();
+  const [authReady, setAuthReady] = useState(false);
 
   // Check if user is banned
   if (!isLoading && user && BANNED_USER_IDS.includes(user.sub as string)) {
@@ -236,10 +237,22 @@ function ConvexAuthSync({ children }: { children: ReactNode }) {
 
     if (user) {
       convex.setAuth(fetchToken);
+      // Give Convex time to sync the auth token
+      setTimeout(() => setAuthReady(true), 500);
     } else {
       convex.clearAuth();
+      setAuthReady(true);
     }
   }, [user, isLoading, fetchToken]);
+
+  // Wait for auth to be ready before rendering children
+  if (isLoading || (user && !authReady)) {
+    return (
+      <ConvexProvider client={convex}>
+        <div style={{ minHeight: '100vh', backgroundColor: '#0d1117' }} />
+      </ConvexProvider>
+    );
+  }
 
   return <ConvexProvider client={convex}>{children}</ConvexProvider>;
 }

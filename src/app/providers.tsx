@@ -90,9 +90,16 @@ function ImpersonationProvider({ children }: { children: ReactNode }) {
 
 function SecurityCheck({ children }: { children: ReactNode }) {
   const [blocked, setBlocked] = useState<{ blocked: boolean; restricted?: boolean; reason?: string; type?: string } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const { user, isLoading } = useUser();
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    
     async function checkSecurity() {
       // Wait for auth to load, then check if admin
       if (isLoading) return;
@@ -154,10 +161,10 @@ function SecurityCheck({ children }: { children: ReactNode }) {
     }
 
     checkSecurity();
-  }, [user, isLoading]);
+  }, [user, isLoading, mounted]);
 
-  // Show nothing while loading auth
-  if (isLoading || blocked === null) return null;
+  // During SSR or before mount, render children
+  if (!mounted || isLoading || blocked === null) return <>{children}</>;
 
   if (blocked.blocked) {
     return (

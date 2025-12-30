@@ -4,11 +4,10 @@ import { v } from "convex/values";
 // JWT Blacklisting
 export const blacklistToken = mutation({
   args: {
-    jti: v.string(),
+    tokenId: v.string(),
     userId: v.string(),
-    exp: v.number(),
+    expiresAt: v.optional(v.number()),
     reason: v.string(),
-    sessionId: v.optional(v.string())
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("blacklistedTokens", {
@@ -19,11 +18,11 @@ export const blacklistToken = mutation({
 });
 
 export const isTokenBlacklisted = query({
-  args: { jti: v.string() },
+  args: { tokenId: v.string() },
   handler: async (ctx, args) => {
     const token = await ctx.db
       .query("blacklistedTokens")
-      .withIndex("by_jti", (q) => q.eq("jti", args.jti))
+      .withIndex("by_tokenId", (q) => q.eq("tokenId", args.tokenId))
       .first();
     return !!token;
   }

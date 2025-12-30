@@ -101,11 +101,17 @@ function SecurityCheck({ children }: { children: ReactNode }) {
     if (!mounted) return;
     
     async function checkSecurity() {
-      // Wait for auth to load, then check if admin
+      // Wait for auth to fully load
       if (isLoading) return;
       
-      // Admins bypass all security checks
+      // Admins bypass ALL security checks - no fingerprint/IP checks
       if (user && ADMIN_USER_IDS.includes(user.sub as string)) {
+        setBlocked({ blocked: false });
+        return;
+      }
+
+      // Non-logged-in users: allow access (they'll be prompted to login if needed)
+      if (!user) {
         setBlocked({ blocked: false });
         return;
       }

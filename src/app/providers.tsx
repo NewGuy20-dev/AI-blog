@@ -236,9 +236,14 @@ function ConvexAuthSync({ children }: { children: ReactNode }) {
     if (isLoading) return;
 
     if (user) {
-      convex.setAuth(fetchToken);
-      // Give Convex time to sync the auth token
-      setTimeout(() => setAuthReady(true), 500);
+      // Fetch token first, then set auth
+      fetchToken().then((token) => {
+        if (token) {
+          convex.setAuth(fetchToken);
+        }
+        // Wait for Convex to process the auth
+        setTimeout(() => setAuthReady(true), 1000);
+      });
     } else {
       convex.clearAuth();
       setAuthReady(true);

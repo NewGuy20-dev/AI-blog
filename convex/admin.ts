@@ -31,12 +31,29 @@ async function isAdmin(ctx: any): Promise<boolean> {
 
 async function requireAdmin(ctx: any) {
   const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
   
-  const admin = await isAdmin(ctx);
-  if (!admin) throw new Error("Not authorized");
+  // If we have identity, check if admin
+  if (identity) {
+    // Hardcoded admins always have access
+    if (HARDCODED_ADMIN_IDS.includes(identity.subject)) {
+      return identity;
+    }
+    
+    // Banned users never have access
+    if (BANNED_USER_IDS.includes(identity.subject)) {
+      throw new Error("Not authorized");
+    }
+    
+    // Check admins table
+    const admin = await ctx.db
+      .query("admins")
+      .withIndex("by_userId", (q: any) => q.eq("userId", identity.subject))
+      .first();
+    
+    if (admin) return identity;
+  }
   
-  return identity;
+  throw new Error("Not authenticated");
 }
 
 // Check if current user is admin

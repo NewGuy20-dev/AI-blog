@@ -125,7 +125,21 @@ export default defineSchema({
     ip: v.optional(v.string()),
     ipAddresses: v.optional(v.array(v.string())),
     userAgent: v.optional(v.string()),
+    timezone: v.optional(v.string()),
+    timezoneHistory: v.optional(v.array(v.object({
+      timezone: v.string(),
+      timestamp: v.number(),
+    }))),
     serverFingerprint: v.optional(v.string()),
+    canvasFingerprint: v.optional(v.string()),
+    webglFingerprint: v.optional(v.string()),
+    audioFingerprint: v.optional(v.string()),
+    screenMetrics: v.optional(v.object({
+      width: v.number(),
+      height: v.number(),
+      colorDepth: v.number(),
+      pixelRatio: v.number(),
+    })),
     spoofAttempts: v.optional(v.number()),
     firstSeen: v.number(),
     lastSeen: v.number(),
@@ -140,6 +154,7 @@ export default defineSchema({
   })
     .index("by_visitorId", ["visitorId"])
     .index("by_userId", ["userId"])
+    .index("by_ip", ["ip"])
     .index("by_banned", ["banned"]),
 
   blacklistedTokens: defineTable({
@@ -154,30 +169,49 @@ export default defineSchema({
     eventType: v.string(),
     userId: v.optional(v.string()),
     ip: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
     fingerprint: v.optional(v.string()),
     details: v.optional(v.any()),
     severity: v.string(),
     timestamp: v.number(),
+    blocked: v.optional(v.boolean()),
+    action: v.optional(v.string()),
   })
     .index("by_userId", ["userId"])
     .index("by_eventType", ["eventType"])
-    .index("by_timestamp", ["timestamp"]),
+    .index("by_timestamp", ["timestamp"])
+    .index("by_severity", ["severity"]),
 
   trustedDevices: defineTable({
     userId: v.string(),
     fingerprint: v.string(),
+    ip: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    timezone: v.optional(v.string()),
     name: v.optional(v.string()),
-    addedAt: v.number(),
-    lastUsed: v.number(),
+    addedAt: v.optional(v.number()),
+    trustedAt: v.optional(v.number()),
+    lastUsed: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_fingerprint", ["fingerprint"]),
 
   bannedHardware: defineTable({
-    hardwareFingerprint: v.string(),
+    hardwareFingerprint: v.optional(v.string()),
+    fingerprint: v.optional(v.string()),
+    canvasFingerprint: v.optional(v.string()),
+    webglFingerprint: v.optional(v.string()),
+    audioFingerprint: v.optional(v.string()),
+    screenMetrics: v.optional(v.object({
+      width: v.number(),
+      height: v.number(),
+      colorDepth: v.number(),
+      pixelRatio: v.number(),
+    })),
     reason: v.string(),
     bannedAt: v.number(),
-    bannedBy: v.string(),
+    bannedBy: v.optional(v.string()),
+    permanent: v.optional(v.boolean()),
   }).index("by_fingerprint", ["hardwareFingerprint"]),
 
   emergencyLockdown: defineTable({
@@ -189,9 +223,13 @@ export default defineSchema({
   }).index("by_active", ["active"]),
 
   rateLimitSettings: defineTable({
-    endpoint: v.string(),
-    maxRequests: v.number(),
-    windowMs: v.number(),
-    updatedAt: v.number(),
+    endpoint: v.optional(v.string()),
+    level: v.optional(v.string()),
+    maxRequests: v.optional(v.number()),
+    requestsPerMinute: v.optional(v.number()),
+    windowMs: v.optional(v.number()),
+    reason: v.optional(v.string()),
+    activatedAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   }).index("by_endpoint", ["endpoint"]),
 });

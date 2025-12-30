@@ -36,13 +36,10 @@ export const blacklistAllUserTokens = mutation({
     await ctx.db.insert("securityEvents", {
       userId: args.userId,
       ip: "system",
-      userAgent: "system",
       eventType: "force_logout_all",
       severity: "high",
       details: { suspiciousActivity: [args.reason] },
       timestamp: Date.now(),
-      blocked: true,
-      action: "all_sessions_revoked"
     });
   }
 });

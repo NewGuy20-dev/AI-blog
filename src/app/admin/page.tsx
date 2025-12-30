@@ -2,157 +2,157 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { FileText, Users, Bookmark, Shield, Activity } from "lucide-react";
-import Link from "next/link";
 import { useUser } from "@auth0/nextjs-auth0/client";
+import { FileText, Users, Bookmark, Shield, AlertTriangle, Ban, Activity } from "lucide-react";
+import Link from "next/link";
+import { StatCard } from "@/components/admin/StatCard";
+import { GlassCard } from "@/components/admin/GlassCard";
+import { GlassButton } from "@/components/admin/GlassButton";
+import { useState, useEffect } from "react";
+
+interface SecurityStats {
+  totalEvents: number;
+  criticalEvents: number;
+  blockedIPs: number;
+  bannedHardware: number;
+  activeThreats: number;
+}
 
 export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useUser();
   const isAdmin = useQuery(api.admin.checkAdmin, authLoading || !user ? "skip" : {});
   const stats = useQuery(api.admin.getStats, isAdmin !== true ? "skip" : {});
   const recentPosts = useQuery(api.admin.listPosts, isAdmin !== true ? "skip" : { limit: 5 });
+  
+  const [securityStats, setSecurityStats] = useState<SecurityStats>({
+    totalEvents: 0, criticalEvents: 0, blockedIPs: 0, bannedHardware: 0, activeThreats: 0
+  });
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/security/stats').then(r => r.json()).then(setSecurityStats).catch(() => {});
+    }
+  }, [isAdmin]);
 
   if (authLoading || isAdmin === undefined) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse">Loading...</div>
-      </div>
-    );
+    return <div className="flex items-center justify-center h-64"><div className="text-white/60">Loading...</div></div>;
   }
 
   if (!isAdmin) {
     return (
-      <div className="p-8">
-        <div className="text-red-500">Access denied. You are not an admin.</div>
-      </div>
+      <GlassCard variant="danger" className="max-w-md mx-auto mt-12 text-center">
+        <Shield className="mx-auto mb-4 text-red-400" size={48} />
+        <h2 className="text-xl font-bold mb-2">Access Denied</h2>
+        <p className="text-white/60">You don't have admin privileges.</p>
+      </GlassCard>
     );
   }
 
+  const threatLevel = securityStats.criticalEvents > 0 ? "red" : securityStats.activeThreats > 0 ? "yellow" : "green";
+
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-bold mb-8">Dashboard</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-white/50 text-sm">Welcome back, Admin</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-sm text-white/60">
+            <div className={`status-dot status-dot-${threatLevel}`} />
+            <span>{threatLevel === "green" ? "All Clear" : threatLevel === "yellow" ? "Monitoring" : "Alert"}</span>
+          </div>
+        </div>
+      </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard
-          icon={FileText}
-          label="Total Posts"
-          value={stats?.posts.total ?? "-"}
-          sub={`${stats?.posts.published ?? 0} published`}
-        />
-        <StatCard
-          icon={Users}
-          label="Users"
-          value={stats?.users ?? "-"}
-        />
-        <StatCard
-          icon={Bookmark}
-          label="Bookmarks"
-          value={stats?.bookmarks ?? "-"}
-        />
-        <StatCard
-          icon={Shield}
-          label="Admins"
-          value={stats?.admins ?? "-"}
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={FileText} label="Total Posts" value={stats?.posts.total ?? "-"} sub={`${stats?.posts.published ?? 0} published`} />
+        <StatCard icon={Users} label="Users" value={stats?.users ?? "-"} />
+        <StatCard icon={Bookmark} label="Bookmarks" value={stats?.bookmarks ?? "-"} />
+        <StatCard icon={Shield} label="Admins" value={stats?.admins ?? "-"} />
       </div>
 
-      {/* Post Status Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
-          <h2 className="text-lg font-semibold mb-4">Post Status</h2>
-          <div className="space-y-3">
-            <StatusBar label="Published" value={stats?.posts.published ?? 0} total={stats?.posts.total ?? 1} color="bg-green-500" />
-            <StatusBar label="Draft" value={stats?.posts.draft ?? 0} total={stats?.posts.total ?? 1} color="bg-yellow-500" />
-            <StatusBar label="Archived" value={stats?.posts.archived ?? 0} total={stats?.posts.total ?? 1} color="bg-gray-500" />
+      {/* Security Summary */}
+      <GlassCard>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Shield size={20} className="text-violet-400" />
+            Security Overview
+          </h2>
+          <Link href="/admin/security-events">
+            <GlassButton variant="secondary" size="sm">View All Events</GlassButton>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="text-center p-3 rounded-lg bg-white/5">
+            <p className="text-2xl font-bold">{securityStats.totalEvents}</p>
+            <p className="text-xs text-white/50">Total Events</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+            <p className="text-2xl font-bold text-red-400">{securityStats.criticalEvents}</p>
+            <p className="text-xs text-white/50">Critical</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-white/5">
+            <p className="text-2xl font-bold">{securityStats.blockedIPs}</p>
+            <p className="text-xs text-white/50">Blocked IPs</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-white/5">
+            <p className="text-2xl font-bold">{securityStats.bannedHardware}</p>
+            <p className="text-xs text-white/50">Hardware Bans</p>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+            <p className="text-2xl font-bold text-orange-400">{securityStats.activeThreats}</p>
+            <p className="text-xs text-white/50">Active Threats</p>
           </div>
         </div>
+      </GlassCard>
 
-        <div className="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
-          <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
+      {/* Quick Actions & Recent Posts */}
+      <div className="grid md:grid-cols-2 gap-6">
+        <GlassCard>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <AlertTriangle size={20} className="text-yellow-400" />
+            Quick Actions
+          </h2>
           <div className="space-y-2">
-            <Link
-              href="/admin/terminal"
-              className="flex items-center gap-3 p-3 rounded-lg bg-[#21262d] hover:bg-[#30363d] transition-colors"
-            >
-              <Activity size={18} className="text-green-500" />
-              <span>Open Terminal</span>
+            <Link href="/admin/emergency-lockdown" className="flex items-center gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+              <AlertTriangle size={18} className="text-red-400" />
+              <span>Emergency Lockdown</span>
             </Link>
-            <Link
-              href="/admin/posts"
-              className="flex items-center gap-3 p-3 rounded-lg bg-[#21262d] hover:bg-[#30363d] transition-colors"
-            >
-              <FileText size={18} className="text-blue-500" />
-              <span>Manage Posts</span>
+            <Link href="/admin/hardware-bans" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+              <Ban size={18} className="text-violet-400" />
+              <span>Manage Hardware Bans</span>
+            </Link>
+            <Link href="/admin/security-events" className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+              <Activity size={18} className="text-violet-400" />
+              <span>View Security Events</span>
             </Link>
           </div>
-        </div>
-      </div>
+        </GlassCard>
 
-      {/* Recent Posts */}
-      <div className="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
-        <h2 className="text-lg font-semibold mb-4">Recent Posts</h2>
-        <div className="space-y-2">
-          {recentPosts?.map((post) => (
-            <div
-              key={post._id}
-              className="flex items-center justify-between p-3 rounded-lg bg-[#21262d]"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{post.title}</p>
-                <p className="text-sm text-gray-500">{post.slug}</p>
+        <GlassCard>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <FileText size={20} className="text-violet-400" />
+            Recent Posts
+          </h2>
+          <div className="space-y-2">
+            {recentPosts?.slice(0, 4).map((post) => (
+              <div key={post._id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium truncate text-sm">{post.title}</p>
+                  <p className="text-xs text-white/40">{post.slug}</p>
+                </div>
+                <span className={`px-2 py-1 text-xs rounded-full ${
+                  post.status === "published" ? "bg-green-500/20 text-green-400" :
+                  post.status === "draft" ? "bg-yellow-500/20 text-yellow-400" : "bg-white/10 text-white/50"
+                }`}>{post.status}</span>
               </div>
-              <span className={`px-2 py-1 text-xs rounded-full ${
-                post.status === "published" ? "bg-green-500/20 text-green-400" :
-                post.status === "draft" ? "bg-yellow-500/20 text-yellow-400" :
-                "bg-gray-500/20 text-gray-400"
-              }`}>
-                {post.status}
-              </span>
-            </div>
-          ))}
-          {!recentPosts && (
-            <div className="text-gray-500 text-center py-4">Loading...</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, sub }: {
-  icon: any;
-  label: string;
-  value: number | string;
-  sub?: string;
-}) {
-  return (
-    <div className="bg-[#161b22] rounded-xl border border-[#30363d] p-6">
-      <div className="flex items-center gap-3 mb-2">
-        <Icon size={20} className="text-gray-500" />
-        <span className="text-sm text-gray-400">{label}</span>
-      </div>
-      <p className="text-3xl font-bold">{value}</p>
-      {sub && <p className="text-sm text-gray-500 mt-1">{sub}</p>}
-    </div>
-  );
-}
-
-function StatusBar({ label, value, total, color }: {
-  label: string;
-  value: number;
-  total: number;
-  color: string;
-}) {
-  const percent = total > 0 ? (value / total) * 100 : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-400">{label}</span>
-        <span>{value}</span>
-      </div>
-      <div className="h-2 bg-[#21262d] rounded-full overflow-hidden">
-        <div className={`h-full ${color} rounded-full`} style={{ width: `${percent}%` }} />
+            ))}
+            {!recentPosts && <div className="text-white/40 text-center py-4">Loading...</div>}
+          </div>
+        </GlassCard>
       </div>
     </div>
   );

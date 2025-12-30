@@ -70,3 +70,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to get banned hardware' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { fingerprint } = await request.json();
+    
+    await convex.mutation('security:unbanHardware' as any, { fingerprint });
+    
+    return NextResponse.json({ success: true, message: `Unbanned ${fingerprint}` });
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to unban hardware' }, { status: 500 });
+  }
+}

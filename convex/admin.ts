@@ -6,7 +6,7 @@ const HARDCODED_ADMIN_IDS = [
 ];
 
 const BANNED_USER_IDS: string[] = [
-  "google-oauth2|103430903957817165722",
+  // Banned users are managed in the database, not hardcoded
 ];
 
 // Helper to check if user is admin

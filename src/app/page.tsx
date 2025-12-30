@@ -1,3 +1,4 @@
+'use client';
 import Link from "next/link";
 import { ArrowRight, Sparkles, Zap, BookOpen } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";

@@ -154,21 +154,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ type: 1 });
   }
   
-  // Handle MESSAGE_CREATE or APPLICATION_COMMAND
-  if (interaction.type === 2 || interaction.type === 3) {
+  // Handle APPLICATION_COMMAND
+  if (interaction.type === 2) {
     const userId = interaction.member?.user?.id || interaction.user?.id;
-    const content = interaction.data?.options?.[0]?.value || interaction.data?.name || "";
+    const content = interaction.data?.options?.[0]?.value || "";
+    const interactionToken = interaction.token;
+    const appId = interaction.application_id;
     
+    // Defer response immediately (tells Discord we're working on it)
+    // Then process in background
+    processInteraction(userId, content, appId, interactionToken).catch(console.error);
+    
+    // Return deferred response (type 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE)
+    return NextResponse.json({ type: 5 });
+  }
+  
+  return NextResponse.json({ type: 1 });
+}
+
+async function processInteraction(userId: string, content: string, appId: string, token: string) {
+  try {
     // Check rate limit
     const rateLimit = await convex.query(api.bot.checkRateLimit, { discordUserId: userId });
     if (!rateLimit.allowed) {
-      return NextResponse.json({
-        type: 4,
-        data: { content: `⏳ Rate limited. Try again in a minute. (${rateLimit.remaining}/10 remaining)` },
-      });
+      await sendFollowup(appId, token, `⏳ Rate limited. Try again in a minute.`);
+      return;
     }
     
-    // Record request
     await convex.mutation(api.bot.recordRequest, { discordUserId: userId });
     
     // Check for action with key
@@ -182,14 +194,11 @@ export async function POST(req: NextRequest) {
       const result = await handleAction(action, args, key, userId);
       
       if (result.newKey) {
-        // DM new key to user
         await sendDM(userId, `🔑 New action key: \`${result.newKey}\`\nKeep this safe!`);
       }
       
-      return NextResponse.json({
-        type: 4,
-        data: { content: result.message },
-      });
+      await sendFollowup(appId, token, result.message);
+      return;
     }
     
     // Regular chat - use Gemma
@@ -198,17 +207,20 @@ export async function POST(req: NextRequest) {
     
     if (sensitive) {
       await sendDM(userId, response);
-      return NextResponse.json({
-        type: 4,
-        data: { content: "📬 Sensitive info sent to your DMs." },
-      });
+      await sendFollowup(appId, token, "📬 Sensitive info sent to your DMs.");
+    } else {
+      await sendFollowup(appId, token, response);
     }
-    
-    return NextResponse.json({
-      type: 4,
-      data: { content: response },
-    });
+  } catch (e) {
+    console.error("Process error:", e);
+    await sendFollowup(appId, token, "❌ An error occurred processing your request.");
   }
-  
-  return NextResponse.json({ type: 1 });
+}
+
+async function sendFollowup(appId: string, token: string, content: string) {
+  await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
 }

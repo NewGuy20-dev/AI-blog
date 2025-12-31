@@ -6,38 +6,34 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 const DISCORD_PUBLIC_KEY = process.env.DISCORD_PUBLIC_KEY!;
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!;
 
-// Verify Discord signature using Web Crypto API
+// Verify Discord signature
 async function verifyDiscordSignature(req: NextRequest, body: string): Promise<boolean> {
   const signature = req.headers.get("x-signature-ed25519");
   const timestamp = req.headers.get("x-signature-timestamp");
   
-  if (!signature || !timestamp) return false;
+  if (!signature || !timestamp || !DISCORD_PUBLIC_KEY) return false;
   
   try {
-    const publicKeyBytes = hexToBytes(DISCORD_PUBLIC_KEY);
-    const key = await crypto.subtle.importKey(
+    const encoder = new TextEncoder();
+    const message = encoder.encode(timestamp + body);
+    
+    // Convert hex strings to Uint8Array
+    const sigBytes = new Uint8Array(signature.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    const keyBytes = new Uint8Array(DISCORD_PUBLIC_KEY.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    
+    const cryptoKey = await crypto.subtle.importKey(
       "raw",
-      publicKeyBytes.buffer as ArrayBuffer,
-      { name: "Ed25519", namedCurve: "Ed25519" },
+      keyBytes,
+      { name: "Ed25519" },
       false,
       ["verify"]
     );
     
-    const signatureBytes = hexToBytes(signature);
-    const messageBytes = new TextEncoder().encode(timestamp + body);
-    
-    return await crypto.subtle.verify("Ed25519", key, signatureBytes.buffer as ArrayBuffer, messageBytes);
-  } catch {
+    return await crypto.subtle.verify("Ed25519", cryptoKey, sigBytes, message);
+  } catch (e) {
+    console.error("Signature verification error:", e);
     return false;
   }
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
 }
 
 // Send DM to a user

@@ -176,33 +176,85 @@ async function checkTimezoneConsistency(ip: string, timezone: string): Promise<{
   return { suspicious: false };
 }
 
-// Placeholder functions - integrate with real services
+// IP-API.com free VPN/Proxy detection
+interface IPApiResponse {
+  status: string;
+  proxy: boolean;
+  hosting: boolean;
+  mobile: boolean;
+  timezone: string;
+  isp: string;
+  org: string;
+  as: string;
+}
+
+let ipApiCache: Map<string, { data: IPApiResponse; expires: number }> = new Map();
+
+async function getIPApiData(ip: string): Promise<IPApiResponse | null> {
+  // Skip localhost
+  if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.')) {
+    return null;
+  }
+  
+  // Check cache (5 min TTL)
+  const cached = ipApiCache.get(ip);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+  
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=status,proxy,hosting,mobile,timezone,isp,org,as`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status === 'success') {
+      ipApiCache.set(ip, { data, expires: Date.now() + 5 * 60 * 1000 });
+      return data;
+    }
+  } catch {
+    // Fail silently
+  }
+  return null;
+}
+
 async function checkIPQualityScore(ip: string) {
-  return { detected: Math.random() > 0.8, service: 'IPQualityScore' };
+  const data = await getIPApiData(ip);
+  return { detected: data?.proxy || false, service: 'ip-api-proxy' };
 }
 
 async function checkMaxMind(ip: string) {
-  return { detected: Math.random() > 0.85, service: 'MaxMind' };
+  const data = await getIPApiData(ip);
+  return { detected: data?.hosting || false, service: 'ip-api-hosting' };
 }
 
 async function checkCustomVPNList(ip: string) {
-  return { detected: Math.random() > 0.9, service: 'CustomList' };
+  const data = await getIPApiData(ip);
+  // Check for known VPN ASNs
+  const vpnAsns = ['AS9009', 'AS20473', 'AS46562', 'AS62041', 'AS212238'];
+  const isVpnAsn = vpnAsns.some(asn => data?.as?.includes(asn));
+  return { detected: isVpnAsn, service: 'vpn-asn-list' };
 }
 
 async function checkASNReputation(ip: string) {
-  return { detected: Math.random() > 0.75, service: 'ASN' };
+  const data = await getIPApiData(ip);
+  // Check for datacenter/hosting keywords in org
+  const dcKeywords = ['hosting', 'cloud', 'server', 'datacenter', 'vps', 'digital ocean', 'aws', 'azure', 'google'];
+  const isDc = dcKeywords.some(kw => data?.org?.toLowerCase().includes(kw) || data?.isp?.toLowerCase().includes(kw));
+  return { detected: isDc, service: 'org-check' };
 }
 
 async function detectProxy(ip: string) {
-  return { detected: Math.random() > 0.9 };
+  const data = await getIPApiData(ip);
+  return { detected: data?.proxy || false };
 }
 
 async function detectDatacenter(ip: string) {
-  return { detected: Math.random() > 0.85 };
+  const data = await getIPApiData(ip);
+  return { detected: data?.hosting || false };
 }
 
 async function getIPGeolocation(ip: string) {
-  return { timezone: 'America/New_York' }; // Placeholder
+  const data = await getIPApiData(ip);
+  return { timezone: data?.timezone || null };
 }
 
 function getTimezoneVariations(timezone: string): string[] {

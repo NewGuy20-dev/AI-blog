@@ -25,6 +25,7 @@ export default defineSchema({
       articlesRead: v.optional(v.number()),
       readingStreak: v.optional(v.number()),
       lastActive: v.optional(v.number()),
+      lastReadDate: v.optional(v.number()),
     })),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -77,6 +78,14 @@ export default defineSchema({
   })
     .index("by_user", ["clerkUserId"])
     .index("by_user_post", ["clerkUserId", "postSlug"]),
+
+  readArticles: defineTable({
+    userId: v.string(),
+    postSlug: v.string(),
+    readAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_post", ["userId", "postSlug"]),
 
   subscribers: defineTable({
     email: v.string(),
@@ -232,4 +241,16 @@ export default defineSchema({
     activatedAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   }).index("by_endpoint", ["endpoint"]),
+
+  botActionKey: defineTable({
+    key: v.string(),
+    createdAt: v.number(),
+    usedAt: v.optional(v.number()),
+    usedBy: v.optional(v.string()),
+  }),
+
+  botRateLimit: defineTable({
+    discordUserId: v.string(),
+    timestamps: v.array(v.number()),
+  }).index("by_discordUserId", ["discordUserId"]),
 });

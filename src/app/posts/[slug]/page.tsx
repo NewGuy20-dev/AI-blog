@@ -11,12 +11,16 @@ import { ReadingProgress } from "@/components/ui/ReadingProgress";
 import { ShareButtons } from "@/components/ui/ShareButtons";
 import { RelatedArticles } from "@/components/ui/RelatedArticles";
 import { TableOfContents } from "@/components/ui/TableOfContents";
+import { useReadingTracker } from "@/lib/hooks/useReadingTracker";
 
 export default function PostPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params.slug as string;
   const post = useQuery(api.posts.getBySlug, { slug });
+
+  // Track reading time
+  useReadingTracker(slug, post?.readingTime ?? 1);
 
   if (post === undefined) {
     return (

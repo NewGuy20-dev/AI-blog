@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runPipeline } from "@/lib/ai/pipeline";
+import { runGemmaPipeline } from "@/lib/ai/gemma/pipeline";
 import { timingSafeEqual } from "crypto";
 
 export const maxDuration = 60;
@@ -21,10 +21,10 @@ export async function GET(req: Request) {
   }
 
   try {
-    const result = await runPipeline();
+    const result = await runGemmaPipeline();
     return NextResponse.json({
-      status: "ok",
-      source: "gemini+tavily",
+      status: result.success ? "ok" : "error",
+      source: "gemma+google_search+openverse",
       timestamp: new Date().toISOString(),
       ...result,
     });
@@ -41,10 +41,10 @@ export async function POST(req: Request) {
   await req.json().catch(() => ({}));
 
   try {
-    const result = await runPipeline();
+    const result = await runGemmaPipeline();
     return NextResponse.json({
-      status: "ok",
-      source: "gemini+tavily",
+      status: result.success ? "ok" : "error",
+      source: "gemma+google_search+openverse",
       timestamp: new Date().toISOString(),
       ...result,
     });

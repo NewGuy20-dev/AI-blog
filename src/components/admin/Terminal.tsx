@@ -156,11 +156,12 @@ export function Terminal() {
 
         case "add_admin":
           const newAdminId = parts[1];
-          if (!newAdminId) {
-            addLine("error", "Usage: add_admin <user_id>");
+          const addKey = parts[2];
+          if (!newAdminId || !addKey) {
+            addLine("error", "Usage: add_admin <user_id> <master_key>");
             break;
           }
-          const addResult = await addAdmin({ userId: newAdminId });
+          const addResult = await addAdmin({ userId: newAdminId, masterKey: addKey });
           if (addResult.success) {
             addLine("success", addResult.message);
           } else {
@@ -170,11 +171,12 @@ export function Terminal() {
 
         case "deown_admin":
           const removeId = parts[1];
-          if (!removeId) {
-            addLine("error", "Usage: deown_admin <user_id>");
+          const removeKey = parts[2];
+          if (!removeId || !removeKey) {
+            addLine("error", "Usage: deown_admin <user_id> <master_key>");
             break;
           }
-          const removeResult = await removeAdmin({ userId: removeId });
+          const removeResult = await removeAdmin({ userId: removeId, masterKey: removeKey });
           if (removeResult.success) {
             addLine("success", removeResult.message);
           } else {

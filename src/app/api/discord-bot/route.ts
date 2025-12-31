@@ -91,39 +91,15 @@ async function handleAction(action: string, args: string, key: string, userId: s
   return { success: true, message: result, newKey: validation.newKey! };
 }
 
-// Background processor - called via fetch to itself
+// Background processor
 async function processInBackground(userId: string, content: string, appId: string, token: string) {
   try {
-    const rateLimit = await convex.query(api.bot.checkRateLimit, { discordUserId: userId });
-    if (!rateLimit.allowed) {
-      await editOriginalResponse(appId, token, "⏳ Rate limited.");
-      return;
-    }
-    await convex.mutation(api.bot.recordRequest, { discordUserId: userId });
-
-    const keyMatch = content.match(/key:([A-Za-z0-9]{32})/);
-    if (keyMatch) {
-      const key = keyMatch[1];
-      const actionPart = content.replace(/key:[A-Za-z0-9]{32}/, "").trim();
-      const [action, ...argParts] = actionPart.split(" ");
-      const result = await handleAction(action, argParts.join(" "), key, userId);
-      if (result.newKey) await sendDM(userId, `🔑 New key: \`${result.newKey}\``);
-      await editOriginalResponse(appId, token, result.message);
-      return;
-    }
-
+    // Simple test response first
     const context = await getAppContext();
-    const { response, sensitive } = await askGemma(content, context);
-    
-    if (sensitive) {
-      await sendDM(userId, response);
-      await editOriginalResponse(appId, token, "📬 Sent to DMs.");
-    } else {
-      await editOriginalResponse(appId, token, response);
-    }
+    await editOriginalResponse(appId, token, `📊 ${context}\n\nYou asked: "${content}"`);
   } catch (e) {
     console.error("Process error:", e);
-    await editOriginalResponse(appId, token, "❌ Error occurred.");
+    await editOriginalResponse(appId, token, "❌ Error: " + String(e));
   }
 }
 
@@ -144,11 +120,21 @@ export async function POST(req: NextRequest) {
     const token = interaction.token;
     const appId = interaction.application_id;
     
-    // Start background processing (fire and forget)
-    processInBackground(userId, content, appId, token).catch(console.error);
-    
-    // Return deferred response immediately (type 5)
-    return NextResponse.json({ type: 5 });
+    // Process inline and await it
+    try {
+      const context = await getAppContext();
+      
+      // Return immediate response with context
+      return NextResponse.json({ 
+        type: 4, 
+        data: { content: `📊 ${context}\n\nYou asked: "${content}"` }
+      });
+    } catch (e) {
+      return NextResponse.json({ 
+        type: 4, 
+        data: { content: "❌ Error: " + String(e) }
+      });
+    }
   }
   
   return NextResponse.json({ type: 1 });

@@ -14,8 +14,8 @@ async function discoverTrendingTopic(): Promise<string> {
     num: 5 
   });
   
-  if (result.success && "data" in result) {
-    const titles = result.data.results.map(r => r.title).join(", ");
+  if (result.success && "data" in result && "results" in result.data) {
+    const titles = (result.data as { results: { title: string }[] }).results.map(r => r.title).join(", ");
     return `Latest trending news: ${titles}`;
   }
   

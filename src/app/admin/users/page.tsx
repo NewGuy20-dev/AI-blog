@@ -15,27 +15,29 @@ export default function AdminUsersPage() {
   const removeAdmin = useMutation(api.admin.removeAdmin);
   const [search, setSearch] = useState("");
   const [newAdminId, setNewAdminId] = useState("");
+  const [masterKey, setMasterKey] = useState("");
 
   const filteredUsers = users?.filter(u => u.userId.toLowerCase().includes(search.toLowerCase()));
   const isUserAdmin = (userId: string) => userId === ORIGINAL_ADMIN_ID || admins?.some(a => a.userId === userId);
 
   const handleAddAdmin = async () => {
-    if (!newAdminId.trim()) return;
-    const result = await addAdmin({ userId: newAdminId.trim() });
+    if (!newAdminId.trim() || !masterKey.trim()) return alert("User ID and Master Key required");
+    const result = await addAdmin({ userId: newAdminId.trim(), masterKey: masterKey.trim() });
     alert(result.message);
     if (result.success) setNewAdminId("");
   };
 
   const handleToggleAdmin = async (userId: string) => {
+    if (!masterKey.trim()) return alert("Master Key required");
     if (isUserAdmin(userId)) {
       if (userId === ORIGINAL_ADMIN_ID) return alert("Cannot remove the original admin");
       if (confirm(`Remove admin privileges from ${userId}?`)) {
-        const result = await removeAdmin({ userId });
+        const result = await removeAdmin({ userId, masterKey: masterKey.trim() });
         alert(result.message);
       }
     } else {
       if (confirm(`Grant admin privileges to ${userId}?`)) {
-        const result = await addAdmin({ userId });
+        const result = await addAdmin({ userId, masterKey: masterKey.trim() });
         alert(result.message);
       }
     }
@@ -57,13 +59,20 @@ export default function AdminUsersPage() {
           <UserPlus size={18} className="text-green-400" />
           Add Admin by User ID
         </h2>
-        <div className="flex gap-2">
+        <div className="space-y-2">
           <input
             type="text"
             placeholder="google-oauth2|123456789..."
             value={newAdminId}
             onChange={(e) => setNewAdminId(e.target.value)}
-            className="glass-input flex-1 px-4 py-2 font-mono text-sm"
+            className="glass-input w-full px-4 py-2 font-mono text-sm"
+          />
+          <input
+            type="password"
+            placeholder="256-char Master Key"
+            value={masterKey}
+            onChange={(e) => setMasterKey(e.target.value)}
+            className="glass-input w-full px-4 py-2 font-mono text-sm"
           />
           <GlassButton onClick={handleAddAdmin}>Add Admin</GlassButton>
         </div>

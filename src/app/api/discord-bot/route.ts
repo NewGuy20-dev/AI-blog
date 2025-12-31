@@ -17,7 +17,7 @@ async function verifyDiscordSignature(req: NextRequest, body: string): Promise<b
     const publicKeyBytes = hexToBytes(DISCORD_PUBLIC_KEY);
     const key = await crypto.subtle.importKey(
       "raw",
-      publicKeyBytes,
+      publicKeyBytes.buffer as ArrayBuffer,
       { name: "Ed25519", namedCurve: "Ed25519" },
       false,
       ["verify"]
@@ -26,7 +26,7 @@ async function verifyDiscordSignature(req: NextRequest, body: string): Promise<b
     const signatureBytes = hexToBytes(signature);
     const messageBytes = new TextEncoder().encode(timestamp + body);
     
-    return await crypto.subtle.verify("Ed25519", key, signatureBytes, messageBytes);
+    return await crypto.subtle.verify("Ed25519", key, signatureBytes.buffer as ArrayBuffer, messageBytes);
   } catch {
     return false;
   }

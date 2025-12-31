@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ConvexHttpClient } from 'convex/browser';
+import { api } from "../../../../../convex/_generated/api";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      ip, 
-      reason, 
-      hardwareBan = true 
-    } = await request.json();
+    const { ip, reason, hardwareBan = true, masterKey } = await request.json();
+
+    // Validate master key for banning
+    const valid = await convex.query(api.admin.validateMasterKey, { key: masterKey || "" });
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid master key' }, { status: 403 });
+    }
 
     await convex.mutation('security:blockIP' as any, {
       ip,
@@ -73,7 +76,13 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { fingerprint } = await request.json();
+    const { fingerprint, masterKey } = await request.json();
+    
+    // Validate master key for unbanning
+    const valid = await convex.query(api.admin.validateMasterKey, { key: masterKey || "" });
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid master key' }, { status: 403 });
+    }
     
     await convex.mutation('security:unbanHardware' as any, { fingerprint });
     

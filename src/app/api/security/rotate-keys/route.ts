@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL!;
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
+    const { masterKey } = await request.json();
+    
+    // Validate master key
+    const valid = await convex.query(api.admin.validateMasterKey, { key: masterKey || "" });
+    if (!valid) {
+      return NextResponse.json({ error: 'Invalid master key' }, { status: 403 });
+    }
+    
     // Generate new JWT signing key
     const newKey = crypto.randomBytes(64).toString('hex');
-    
-    // In production, you'd update this in your environment/secrets
-    // For now, we'll simulate the rotation
     
     // Blacklist all existing tokens (force re-authentication)
     await blacklistAllTokens('JWT key rotation');

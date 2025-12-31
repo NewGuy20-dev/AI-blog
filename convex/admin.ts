@@ -30,6 +30,24 @@ export const initializeMasterKey = mutation({
   },
 });
 
+// Get master key for validation (internal use)
+export const getMasterKey = query({
+  args: {},
+  handler: async (ctx) => {
+    const keyDoc = await ctx.db.query("adminMasterKey").first();
+    return keyDoc?.key ?? null;
+  },
+});
+
+// Validate master key
+export const validateMasterKey = query({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    const keyDoc = await ctx.db.query("adminMasterKey").first();
+    return keyDoc?.key === args.key;
+  },
+});
+
 // Helper to check if user is admin
 async function isAdmin(ctx: any): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();

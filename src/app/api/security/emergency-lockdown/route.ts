@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../../../convex/_generated/api";
 
 const DISCORD_WEBHOOK = process.env.DISCORD_WEBHOOK_URL!;
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
-    const { reason } = await request.json();
+    const { reason, masterKey } = await request.json();
+    
+    // Validate master key
+    const keyDoc = await convex.query(api.admin.getMasterKey, {});
+    if (!keyDoc || keyDoc !== masterKey) {
+      return NextResponse.json({ error: 'Invalid master key' }, { status: 403 });
+    }
     
     // Activate emergency lockdown
     await activateEmergencyLockdown(reason || 'Manual emergency lockdown');

@@ -117,23 +117,31 @@ export async function POST(req: NextRequest) {
   if (interaction.type === 2) {
     const userId = interaction.member?.user?.id || interaction.user?.id;
     const content = interaction.data?.options?.[0]?.value || "";
-    const token = interaction.token;
-    const appId = interaction.application_id;
     
-    // Process inline and await it
     try {
       const context = await getAppContext();
       
-      // Return immediate response with context
+      // Try Gemma with 2s timeout
+      const gemmaPromise = askGemma(content, context);
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+      
+      const result = await Promise.race([gemmaPromise, timeoutPromise]);
+      
+      if (result) {
+        if (result.sensitive) {
+          await sendDM(userId, result.response);
+          return NextResponse.json({ type: 4, data: { content: "📬 Sent to DMs." } });
+        }
+        return NextResponse.json({ type: 4, data: { content: result.response } });
+      }
+      
+      // Timeout - return stats only
       return NextResponse.json({ 
         type: 4, 
-        data: { content: `📊 ${context}\n\nYou asked: "${content}"` }
+        data: { content: `📊 ${context}\n\n_AI busy, showing stats only._` }
       });
     } catch (e) {
-      return NextResponse.json({ 
-        type: 4, 
-        data: { content: "❌ Error: " + String(e) }
-      });
+      return NextResponse.json({ type: 4, data: { content: "❌ Error occurred." } });
     }
   }
   

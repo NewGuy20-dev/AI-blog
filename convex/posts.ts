@@ -1,6 +1,18 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 
+// Public query for bot
+export const getPublishedCount = query({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("posts").collect();
+    return {
+      count: posts.filter(p => p.status === "published").length,
+      total: posts.length,
+    };
+  },
+});
+
 const postArgs = {
   slug: v.string(),
   title: v.string(),

@@ -60,25 +60,20 @@ async function sendDM(userId: string, content: string) {
   });
 }
 
-// Get app context for Gemma
+// Get app context for Gemma (using public queries)
 async function getAppContext(): Promise<string> {
-  const [posts, users, securityEvents, auditLogs, blockedIps] = await Promise.all([
-    convex.query(api.admin.getStats, {}),
-    convex.query(api.admin.listUsers, { limit: 5 }),
-    convex.query(api.security.getRecentEvents, { limit: 10 }),
-    convex.query(api.admin.getAuditLogs, { limit: 5 }),
-    convex.query(api.security.getBlockedIPCount, {}),
-  ]);
-  
-  return `
+  try {
+    const [posts, securityEvents, blockedIps] = await Promise.all([
+      convex.query(api.posts.getPublishedCount, {}),
+      convex.query(api.security.getRecentEvents, { limit: 10 }),
+      convex.query(api.security.getBlockedIPCount, {}),
+    ]);
+    
+    return `
 APP CONTEXT (Pageo - AI News Blog):
-- Posts: ${posts.posts.total} total (${posts.posts.published} published, ${posts.posts.draft} draft, ${posts.posts.archived} archived)
-- Users: ${posts.users} registered
-- Bookmarks: ${posts.bookmarks} total
-- Admins: ${posts.admins}
+- Published Posts: ${posts.count}
 - Blocked IPs: ${blockedIps.count}
-- Recent Security Events: ${securityEvents.length} in last 24h
-- Last Pipeline Run: ${auditLogs[0]?.stage || "unknown"} - ${auditLogs[0]?.status || "unknown"}
+- Recent Security Events: ${securityEvents.length}
 
 AVAILABLE ACTIONS (require key):
 - archive <slug> - Archive a post
@@ -88,6 +83,10 @@ SENSITIVITY RULES:
 - User IDs, IPs, security details = SENSITIVE (DM only)
 - Stats, counts, general info = NON-SENSITIVE (channel OK)
 `.trim();
+  } catch (e) {
+    console.error("Context error:", e);
+    return "APP CONTEXT: Unable to fetch stats. Bot is operational.";
+  }
 }
 
 // Call Gemma for response

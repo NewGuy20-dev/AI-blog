@@ -5,9 +5,30 @@ const HARDCODED_ADMIN_IDS = [
   "google-oauth2|101765812180352599429",
 ];
 
-const BANNED_USER_IDS: string[] = [
-  // Banned users are managed in the database, not hardcoded
-];
+const BANNED_USER_IDS: string[] = [];
+
+// Generate 256-char cryptographic key
+function generate256Key(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let key = "";
+  for (let i = 0; i < 256; i++) {
+    key += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return key;
+}
+
+// Initialize master key (run once)
+export const initializeMasterKey = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("adminMasterKey").first();
+    if (existing) return { key: existing.key, alreadyExists: true };
+    
+    const key = generate256Key();
+    await ctx.db.insert("adminMasterKey", { key, createdAt: Date.now() });
+    return { key, alreadyExists: false };
+  },
+});
 
 // Helper to check if user is admin
 async function isAdmin(ctx: any): Promise<boolean> {
@@ -204,11 +225,20 @@ export const listAdmins = query({
   },
 });
 
-// Add admin
+// Add admin - requires master key
 export const addAdmin = mutation({
-  args: { userId: v.string() },
+  args: { userId: v.string(), masterKey: v.string() },
   handler: async (ctx, args) => {
     const identity = await requireAdmin(ctx);
+    
+    // Validate master key
+    const keyDoc = await ctx.db.query("adminMasterKey").first();
+    if (!keyDoc || keyDoc.key !== args.masterKey) {
+      return { success: false, message: "Invalid master key" };
+    }
+    
+    // Update last used
+    await ctx.db.patch(keyDoc._id, { lastUsedAt: Date.now(), lastUsedBy: identity.subject });
     
     // Check if already hardcoded admin
     if (HARDCODED_ADMIN_IDS.includes(args.userId)) {
@@ -235,11 +265,20 @@ export const addAdmin = mutation({
   },
 });
 
-// Remove admin
+// Remove admin - requires master key
 export const removeAdmin = mutation({
-  args: { userId: v.string() },
+  args: { userId: v.string(), masterKey: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const identity = await requireAdmin(ctx);
+    
+    // Validate master key
+    const keyDoc = await ctx.db.query("adminMasterKey").first();
+    if (!keyDoc || keyDoc.key !== args.masterKey) {
+      return { success: false, message: "Invalid master key" };
+    }
+    
+    // Update last used
+    await ctx.db.patch(keyDoc._id, { lastUsedAt: Date.now(), lastUsedBy: identity.subject });
     
     // Cannot remove hardcoded admins
     if (HARDCODED_ADMIN_IDS.includes(args.userId)) {

@@ -249,6 +249,13 @@ export default defineSchema({
     usedBy: v.optional(v.string()),
   }),
 
+  adminMasterKey: defineTable({
+    key: v.string(),
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    lastUsedBy: v.optional(v.string()),
+  }),
+
   botRateLimit: defineTable({
     discordUserId: v.string(),
     timestamps: v.array(v.number()),

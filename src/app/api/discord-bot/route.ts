@@ -16,19 +16,10 @@ async function verifyDiscordSignature(req: NextRequest, body: string): Promise<b
   try {
     const encoder = new TextEncoder();
     const message = encoder.encode(timestamp + body);
-    
-    // Convert hex strings to Uint8Array
     const sigBytes = new Uint8Array(signature.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
     const keyBytes = new Uint8Array(DISCORD_PUBLIC_KEY.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
     
-    const cryptoKey = await crypto.subtle.importKey(
-      "raw",
-      keyBytes,
-      { name: "Ed25519" },
-      false,
-      ["verify"]
-    );
-    
+    const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "Ed25519" }, false, ["verify"]);
     return await crypto.subtle.verify("Ed25519", cryptoKey, sigBytes, message);
   } catch (e) {
     console.error("Signature verification error:", e);
@@ -38,29 +29,20 @@ async function verifyDiscordSignature(req: NextRequest, body: string): Promise<b
 
 // Send DM to a user
 async function sendDM(userId: string, content: string) {
-  // Create DM channel
   const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
     method: "POST",
-    headers: {
-      Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({ recipient_id: userId }),
   });
   const dm = await dmRes.json();
-  
-  // Send message
   await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
     method: "POST",
-    headers: {
-      Authorization: `Bot ${DISCORD_BOT_TOKEN}`,
-      "Content-Type": "application/json",
-    },
+    headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}`, "Content-Type": "application/json" },
     body: JSON.stringify({ content }),
   });
 }
 
-// Get app context for Gemma (using public queries)
+// Get app context
 async function getAppContext(): Promise<string> {
   try {
     const [posts, securityEvents, blockedIps] = await Promise.all([
@@ -68,166 +50,99 @@ async function getAppContext(): Promise<string> {
       convex.query(api.security.getRecentEvents, { limit: 10 }),
       convex.query(api.security.getBlockedIPCount, {}),
     ]);
-    
-    return `
-APP CONTEXT (Pageo - AI News Blog):
-- Published Posts: ${posts.count}
-- Blocked IPs: ${blockedIps.count}
-- Recent Security Events: ${securityEvents.length}
-
-AVAILABLE ACTIONS (require key):
-- archive <slug> - Archive a post
-- view-security - View detailed security events (sensitive, sent via DM)
-
-SENSITIVITY RULES:
-- User IDs, IPs, security details = SENSITIVE (DM only)
-- Stats, counts, general info = NON-SENSITIVE (channel OK)
-`.trim();
-  } catch (e) {
-    console.error("Context error:", e);
-    return "APP CONTEXT: Unable to fetch stats. Bot is operational.";
+    return `APP: Pageo AI News Blog | Posts: ${posts.count} published | Blocked IPs: ${blockedIps.count} | Security Events: ${securityEvents.length} recent`;
+  } catch {
+    return "APP: Pageo AI News Blog (stats unavailable)";
   }
 }
 
-// Call Gemma for response
+// Call Gemma
 async function askGemma(userMessage: string, context: string): Promise<{ response: string; sensitive: boolean }> {
   const { GoogleGenAI } = await import("@google/genai");
   const genai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY! });
   
   const result = await genai.models.generateContent({
-    model: "gemma-3-12b-it",
-    contents: [{
-      role: "user",
-      parts: [{ text: `${context}\n\nUser question: ${userMessage}\n\nRespond concisely. End with [SENSITIVE] if response contains user IDs, IPs, or security details, otherwise end with [PUBLIC].` }],
-    }],
+    model: "gemini-2.0-flash-lite",
+    contents: [{ role: "user", parts: [{ text: `${context}\n\nQuestion: ${userMessage}\n\nRespond concisely (under 200 chars). Add [SENSITIVE] at end if contains IPs/user IDs, else [PUBLIC].` }] }],
   });
   
-  const text = result.text || "I couldn't process that request.";
+  const text = result.text || "Unable to process.";
   const sensitive = text.includes("[SENSITIVE]");
-  const response = text.replace(/\[(SENSITIVE|PUBLIC)\]/g, "").trim();
-  
-  return { response, sensitive };
+  return { response: text.replace(/\[(SENSITIVE|PUBLIC)\]/g, "").trim(), sensitive };
 }
 
 // Handle admin actions
 async function handleAction(action: string, args: string, key: string, userId: string): Promise<{ success: boolean; message: string; newKey?: string }> {
   const validation = await convex.mutation(api.bot.validateAndRotateKey, { key, usedBy: userId });
-  
-  if (!validation.valid) {
-    return { success: false, message: "❌ Invalid action key." };
-  }
+  if (!validation.valid) return { success: false, message: "❌ Invalid action key." };
   
   let result: string;
-  
   switch (action) {
-    case "archive": {
-      const archiveResult = await convex.mutation(api.admin.publishPost, { slug: args }); // Using existing mutation
+    case "archive":
+      const archiveResult = await convex.mutation(api.admin.publishPost, { slug: args });
       result = archiveResult.success ? `✅ Archived: ${args}` : `❌ ${archiveResult.message}`;
       break;
-    }
-    case "view-security": {
+    case "view-security":
       const events = await convex.query(api.security.getRecentEvents, { limit: 20 });
-      const formatted = events.map((e: any) => `[${e.severity}] ${e.eventType} - ${e.ip || "N/A"}`).join("\n");
-      result = `🔒 Security Events:\n${formatted}`;
+      result = `🔒 Security Events:\n${events.map((e: any) => `[${e.severity}] ${e.eventType}`).join("\n")}`;
       break;
-    }
     default:
       result = `❌ Unknown action: ${action}`;
   }
-  
   return { success: true, message: result, newKey: validation.newKey! };
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   
-  // Verify signature
-  const isValid = await verifyDiscordSignature(req, body);
-  if (!isValid) {
+  if (!await verifyDiscordSignature(req, body)) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
   
   const interaction = JSON.parse(body);
   
-  // Handle PING (Discord verification)
-  if (interaction.type === 1) {
-    return NextResponse.json({ type: 1 });
-  }
+  // PING
+  if (interaction.type === 1) return NextResponse.json({ type: 1 });
   
-  // Handle APPLICATION_COMMAND
+  // APPLICATION_COMMAND
   if (interaction.type === 2) {
     const userId = interaction.member?.user?.id || interaction.user?.id;
     const content = interaction.data?.options?.[0]?.value || "";
-    const interactionToken = interaction.token;
-    const appId = interaction.application_id;
-    
-    // Defer response immediately (tells Discord we're working on it)
-    // Then process in background
-    processInteraction(userId, content, appId, interactionToken).catch(console.error);
-    
-    // Return deferred response (type 5 = DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE)
-    return NextResponse.json({ type: 5 });
-  }
-  
-  return NextResponse.json({ type: 1 });
-}
-
-async function processInteraction(userId: string, content: string, appId: string, token: string) {
-  try {
-    // Check rate limit
-    const rateLimit = await convex.query(api.bot.checkRateLimit, { discordUserId: userId });
-    if (!rateLimit.allowed) {
-      await sendFollowup(appId, token, `⏳ Rate limited. Try again in a minute.`);
-      return;
-    }
-    
-    await convex.mutation(api.bot.recordRequest, { discordUserId: userId });
-    
-    // Check for action with key
-    const keyMatch = content.match(/key:([A-Za-z0-9]{32})/);
-    if (keyMatch) {
-      const key = keyMatch[1];
-      const actionPart = content.replace(/key:[A-Za-z0-9]{32}/, "").trim();
-      const [action, ...argParts] = actionPart.split(" ");
-      const args = argParts.join(" ");
-      
-      const result = await handleAction(action, args, key, userId);
-      
-      if (result.newKey) {
-        await sendDM(userId, `🔑 New action key: \`${result.newKey}\`\nKeep this safe!`);
-      }
-      
-      await sendFollowup(appId, token, result.message);
-      return;
-    }
-    
-    // Get context and respond with Gemma
-    const context = await getAppContext();
     
     try {
+      // Rate limit
+      const rateLimit = await convex.query(api.bot.checkRateLimit, { discordUserId: userId });
+      if (!rateLimit.allowed) {
+        return NextResponse.json({ type: 4, data: { content: "⏳ Rate limited." } });
+      }
+      await convex.mutation(api.bot.recordRequest, { discordUserId: userId });
+      
+      // Action with key
+      const keyMatch = content.match(/key:([A-Za-z0-9]{32})/);
+      if (keyMatch) {
+        const key = keyMatch[1];
+        const actionPart = content.replace(/key:[A-Za-z0-9]{32}/, "").trim();
+        const [action, ...argParts] = actionPart.split(" ");
+        const result = await handleAction(action, argParts.join(" "), key, userId);
+        if (result.newKey) await sendDM(userId, `🔑 New key: \`${result.newKey}\``);
+        return NextResponse.json({ type: 4, data: { content: result.message } });
+      }
+      
+      // Gemma chat
+      const context = await getAppContext();
       const { response, sensitive } = await askGemma(content, context);
       
       if (sensitive) {
         await sendDM(userId, response);
-        await sendFollowup(appId, token, "📬 Sensitive info sent to your DMs.");
-      } else {
-        await sendFollowup(appId, token, response);
+        return NextResponse.json({ type: 4, data: { content: "📬 Sent to DMs." } });
       }
-    } catch (gemmaError) {
-      console.error("Gemma error:", gemmaError);
-      // Fallback response with just context
-      await sendFollowup(appId, token, `📊 **App Stats:**\n${context}\n\n_AI response unavailable_`);
+      return NextResponse.json({ type: 4, data: { content: response } });
+      
+    } catch (e) {
+      console.error("Error:", e);
+      return NextResponse.json({ type: 4, data: { content: "❌ Error occurred." } });
     }
-  } catch (e) {
-    console.error("Process error:", e);
-    await sendFollowup(appId, token, "❌ An error occurred processing your request.");
   }
-}
-
-async function sendFollowup(appId: string, token: string, content: string) {
-  await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content }),
-  });
+  
+  return NextResponse.json({ type: 1 });
 }

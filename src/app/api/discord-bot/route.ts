@@ -117,28 +117,32 @@ export async function POST(req: NextRequest) {
   if (interaction.type === 2) {
     const userId = interaction.member?.user?.id || interaction.user?.id;
     const content = interaction.data?.options?.[0]?.value || "";
+    const channelId = interaction.channel_id;
     
     try {
       const context = await getAppContext();
       
-      // Try Gemma with 2s timeout
-      const gemmaPromise = askGemma(content, context);
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
-      
-      const result = await Promise.race([gemmaPromise, timeoutPromise]);
-      
-      if (result) {
-        if (result.sensitive) {
-          await sendDM(userId, result.response);
-          return NextResponse.json({ type: 4, data: { content: "📬 Sent to DMs." } });
-        }
-        return NextResponse.json({ type: 4, data: { content: result.response } });
+      // Check for action with key (these are fast)
+      const keyMatch = content.match(/key:([A-Za-z0-9]{32})/);
+      if (keyMatch) {
+        const key = keyMatch[1];
+        const actionPart = content.replace(/key:[A-Za-z0-9]{32}/, "").trim();
+        const [action, ...argParts] = actionPart.split(" ");
+        const result = await handleAction(action, argParts.join(" "), key, userId);
+        if (result.newKey) await sendDM(userId, `🔑 New key: \`${result.newKey}\``);
+        return NextResponse.json({ type: 4, data: { content: result.message } });
       }
       
-      // Timeout - return stats only
+      // For questions, respond with stats and trigger async Gemma
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://ai-blog-mauve-omega.vercel.app'}/api/discord-bot/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId, content, context, userId }),
+      }).catch(() => {});
+      
       return NextResponse.json({ 
         type: 4, 
-        data: { content: `📊 ${context}\n\n_AI busy, showing stats only._` }
+        data: { content: `📊 ${context}\n\n⏳ _Processing your question..._` }
       });
     } catch (e) {
       return NextResponse.json({ type: 4, data: { content: "❌ Error occurred." } });

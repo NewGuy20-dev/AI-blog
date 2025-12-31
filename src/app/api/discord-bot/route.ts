@@ -201,15 +201,22 @@ async function processInteraction(userId: string, content: string, appId: string
       return;
     }
     
-    // Regular chat - use Gemma
+    // Get context and respond with Gemma
     const context = await getAppContext();
-    const { response, sensitive } = await askGemma(content, context);
     
-    if (sensitive) {
-      await sendDM(userId, response);
-      await sendFollowup(appId, token, "📬 Sensitive info sent to your DMs.");
-    } else {
-      await sendFollowup(appId, token, response);
+    try {
+      const { response, sensitive } = await askGemma(content, context);
+      
+      if (sensitive) {
+        await sendDM(userId, response);
+        await sendFollowup(appId, token, "📬 Sensitive info sent to your DMs.");
+      } else {
+        await sendFollowup(appId, token, response);
+      }
+    } catch (gemmaError) {
+      console.error("Gemma error:", gemmaError);
+      // Fallback response with just context
+      await sendFollowup(appId, token, `📊 **App Stats:**\n${context}\n\n_AI response unavailable_`);
     }
   } catch (e) {
     console.error("Process error:", e);

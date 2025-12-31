@@ -21,8 +21,14 @@ ${TOOLS_DESCRIPTION}
 
 WORKFLOW:
 1. First, use google_search to get current information about the topic
-2. ALWAYS use openverse_image to find a relevant featured image for the blog
+2. ALWAYS use openverse_image to find a relevant featured image - USE SPECIFIC, UNIQUE SEARCH TERMS (e.g., "solar panel installation rooftop" not just "technology")
 3. After receiving tool results, generate the blog as JSON
+
+IMAGE SEARCH TIPS:
+- Be specific: "electric car charging station" not "cars"
+- Include context: "doctor examining patient hospital" not "health"
+- Use descriptive terms: "stock market trading floor screens" not "business"
+- Avoid generic terms like "news", "technology", "world"
 
 CATEGORIES (pick ONE that best fits):
 technology, business, sports, entertainment, health, science, politics, world, lifestyle, opinion, law, education
@@ -110,7 +116,8 @@ function parseArticle(text: string, toolResults: ToolResult[]): Article {
     if (imageResult && imageResult.success && "data" in imageResult) {
       const images = (imageResult.data as any).images;
       if (images && images.length > 0) {
-        const img = images[0];
+        // Pick random image to avoid duplicates
+        const img = images[Math.floor(Math.random() * images.length)];
         featuredImage = {
           url: img.url,
           alt: img.title,

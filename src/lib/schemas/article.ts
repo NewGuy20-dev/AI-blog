@@ -17,6 +17,7 @@ export const ArticleSchema = z.object({
     title: z.string(),
     slug: z.string(),
     summary: z.string(),
+    category: z.string().optional(),
     content: z.array(ContentBlockSchema),
     sources: z.array(z.object({ title: z.string(), url: z.string() })),
     tags: z.array(z.string()),

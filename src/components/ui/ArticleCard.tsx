@@ -50,14 +50,26 @@ export function ArticleCard({ post }: ArticleCardProps) {
   const isNew = Date.now() - post.publishedAt < 24 * 60 * 60 * 1000;
   const category = post.tags[0] || "General";
 
-  const handleBookmarkClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggle(post.slug);
-  };
-
   return (
-    <article className="group h-full bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-all duration-200 overflow-hidden flex flex-col">
+    <article className="group relative h-full bg-[var(--color-card)] rounded-2xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/40 transition-all duration-200 overflow-hidden flex flex-col">
+      {/* Bookmark button outside Link */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          toggle(post.slug);
+        }}
+        className={`absolute top-44 right-5 z-10 p-2 rounded-lg transition-all ${
+          bookmarked 
+            ? "text-[var(--color-primary)]" 
+            : "text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 hover:text-[var(--color-primary)]"
+        }`}
+        aria-label={bookmarked ? "Remove bookmark" : "Add bookmark"}
+      >
+        <Bookmark size={16} strokeWidth={1.5} className={bookmarked ? "fill-current" : ""} />
+      </button>
+
       <Link href={`/posts/${post.slug}`} className="flex flex-col h-full">
         {/* Image */}
         <div className="relative w-full h-40 bg-[var(--color-border)] overflow-hidden">
@@ -87,17 +99,7 @@ export function ArticleCard({ post }: ArticleCardProps) {
                 {category}
               </span>
             </div>
-            <button
-              onClick={handleBookmarkClick}
-              className={`p-2 -m-1 rounded-lg transition-all ${
-                bookmarked 
-                  ? "text-[var(--color-primary)]" 
-                  : "text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 hover:text-[var(--color-primary)]"
-              }`}
-              aria-label={bookmarked ? "Remove bookmark" : "Add bookmark"}
-            >
-              <Bookmark size={16} strokeWidth={1.5} className={bookmarked ? "fill-current" : ""} />
-            </button>
+            <div className="w-8" />
           </div>
 
           {/* Title & Summary */}

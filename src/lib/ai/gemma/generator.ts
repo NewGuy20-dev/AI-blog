@@ -20,9 +20,12 @@ const SYSTEM_PROMPT = `You are an expert blog writer creating SEO-optimized, fac
 ${TOOLS_DESCRIPTION}
 
 WORKFLOW:
-1. First, use tavily_search to get current information about the topic
+1. First, use google_search to get current information about the topic
 2. ALWAYS use openverse_image to find a relevant featured image for the blog
 3. After receiving tool results, generate the blog as JSON
+
+CATEGORIES (pick ONE that best fits):
+technology, business, sports, entertainment, health, science, politics, world, lifestyle, opinion, law, education
 
 OUTPUT FORMAT (after receiving tool results):
 \`\`\`json
@@ -30,7 +33,8 @@ OUTPUT FORMAT (after receiving tool results):
   "title": "Compelling headline",
   "slug": "url-friendly-slug",
   "summary": "1-2 sentence summary",
-  "featuredImage": {"url": "image url from openverse", "alt": "description", "credit": "creator name"},
+  "category": "technology",
+  "featuredImage": {"url": "image url from openverse", "alt": "description"},
   "content": [
     {"type": "heading", "level": 1, "text": "Title"},
     {"type": "paragraph", "text": "Content..."}
@@ -110,11 +114,16 @@ function parseArticle(text: string, toolResults: ToolResult[]): Article {
         featuredImage = {
           url: img.url,
           alt: img.title,
-          credit: img.creator,
-          license: img.license,
         };
       }
     }
+  }
+  // Normalize featuredImage to match Convex schema (only url and alt)
+  if (featuredImage) {
+    featuredImage = {
+      url: featuredImage.url,
+      alt: featuredImage.alt || "Featured image",
+    };
   }
   if (Array.isArray(content)) {
     content = content.map((block: any) => {
@@ -132,10 +141,35 @@ function parseArticle(text: string, toolResults: ToolResult[]): Article {
     title: parsed.title || "Untitled",
     slug: parsed.slug || parsed.title?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "untitled",
     summary: parsed.summary || parsed.description || "",
+    category: parsed.category || inferCategoryFromTags(parsed.tags),
     content,
     sources: parsed.sources || [],
     tags: parsed.tags || [],
     readingTime: parsed.readingTime || parsed.reading_time || 5,
     featuredImage,
   };
+}
+
+function inferCategoryFromTags(tags: string[]): string {
+  if (!tags || tags.length === 0) return "world";
+  const categoryMap: Record<string, string[]> = {
+    technology: ["tech", "ai", "software", "hardware", "cyber", "digital", "internet", "app"],
+    business: ["business", "economy", "finance", "market", "stock", "company", "startup"],
+    sports: ["sports", "football", "basketball", "soccer", "tennis", "olympics", "athlete"],
+    entertainment: ["entertainment", "movie", "music", "celebrity", "tv", "streaming", "gaming"],
+    health: ["health", "medical", "covid", "vaccine", "disease", "mental", "fitness"],
+    science: ["science", "research", "space", "nasa", "climate", "environment", "discovery"],
+    politics: ["politics", "election", "government", "congress", "senate", "president", "policy"],
+    world: ["world", "international", "global", "country", "nation", "war", "conflict"],
+    lifestyle: ["lifestyle", "travel", "food", "fashion", "home", "relationship"],
+    education: ["education", "school", "university", "student", "learning", "college"],
+    law: ["law", "legal", "court", "judge", "lawsuit", "crime", "justice"],
+  };
+  
+  for (const [category, keywords] of Object.entries(categoryMap)) {
+    if (tags.some(tag => keywords.some(kw => tag.toLowerCase().includes(kw)))) {
+      return category;
+    }
+  }
+  return "world";
 }

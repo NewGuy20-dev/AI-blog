@@ -39,6 +39,58 @@ export const createInternal = internalMutation({
   },
 });
 
+// Pipeline mutation - for automated article creation (uses secret validation)
+export const createFromPipeline = mutation({
+  args: postArgs,
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("posts")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+    if (existing) return existing._id;
+    return await ctx.db.insert("posts", args);
+  },
+});
+
+// Categorize all uncategorized posts based on tags
+export const categorizeAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("posts").collect();
+    let updated = 0;
+    
+    const categoryMap: Record<string, string[]> = {
+      technology: ["tech", "ai", "software", "hardware", "cyber", "digital", "internet", "app", "computer"],
+      business: ["business", "economy", "finance", "market", "stock", "company", "startup", "investment"],
+      sports: ["sports", "football", "basketball", "soccer", "tennis", "olympics", "athlete", "game"],
+      entertainment: ["entertainment", "movie", "music", "celebrity", "tv", "streaming", "gaming", "film"],
+      health: ["health", "medical", "covid", "vaccine", "disease", "mental", "fitness", "wellness"],
+      science: ["science", "research", "space", "nasa", "climate", "environment", "discovery", "physics"],
+      politics: ["politics", "election", "government", "congress", "senate", "president", "policy", "vote"],
+      world: ["world", "international", "global", "country", "nation", "war", "conflict", "foreign"],
+      lifestyle: ["lifestyle", "travel", "food", "fashion", "home", "relationship", "culture"],
+      education: ["education", "school", "university", "student", "learning", "college", "academic"],
+      law: ["law", "legal", "court", "judge", "lawsuit", "crime", "justice", "attorney"],
+    };
+    
+    for (const post of posts) {
+      if (!post.category && post.tags && post.tags.length > 0) {
+        let category = "world";
+        for (const [cat, keywords] of Object.entries(categoryMap)) {
+          if (post.tags.some((tag: string) => keywords.some(kw => tag.toLowerCase().includes(kw)))) {
+            category = cat;
+            break;
+          }
+        }
+        await ctx.db.patch(post._id, { category });
+        updated++;
+      }
+    }
+    
+    return { updated, total: posts.length };
+  },
+});
+
 // Public create - requires authentication
 export const create = mutation({
   args: postArgs,

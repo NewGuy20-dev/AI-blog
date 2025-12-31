@@ -264,6 +264,16 @@ export const getRecentSecurityEvents = query({
   }
 });
 
+export const getRecentEvents = query({
+  args: { limit: v.number() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("securityEvents")
+      .order("desc")
+      .take(args.limit);
+  }
+});
+
 export const logSecurityEvent = mutation({
   args: {
     userId: v.optional(v.string()),
@@ -610,6 +620,39 @@ export const getBannedHardware = query({
     return await ctx.db
       .query("bannedHardware")
       .collect();
+  }
+});
+
+export const unbanHardware = mutation({
+  args: { fingerprint: v.string() },
+  handler: async (ctx, args) => {
+    // Remove from bannedHardware table
+    const banned = await ctx.db
+      .query("bannedHardware")
+      .filter((q) => q.eq(q.field("fingerprint"), args.fingerprint))
+      .first();
+    
+    if (banned) {
+      await ctx.db.delete(banned._id);
+    }
+    
+    // Also unban in fingerprints table
+    const fingerprint = await ctx.db
+      .query("fingerprints")
+      .filter((q) => q.or(
+        q.eq(q.field("visitorId"), args.fingerprint),
+        q.eq(q.field("serverFingerprint"), args.fingerprint)
+      ))
+      .first();
+    
+    if (fingerprint) {
+      await ctx.db.patch(fingerprint._id, {
+        banned: false,
+        banReason: undefined,
+        bannedAt: undefined,
+        autoBanned: false
+      });
+    }
   }
 });
 

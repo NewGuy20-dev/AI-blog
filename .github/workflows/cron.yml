@@ -19,7 +19,7 @@ jobs:
             exit 1
           fi
           
-          API_URL="${PROD_URL}/api/generate-gemma"
+          API_URL="${PROD_URL}/api/run-job"
           echo "Calling: $API_URL"
           
           for attempt in 1 2 3; do
@@ -29,7 +29,7 @@ jobs:
               -X POST "$API_URL" \
               -H "Authorization: Bearer $CRON_SECRET" \
               -H "Content-Type: application/json" \
-              -d '{"topic": "Latest trending news"}')
+              -d '{}')
             
             echo "Response code: $HTTP_CODE"
             cat response.txt

@@ -236,21 +236,20 @@ function ConvexAuthSync({ children }: { children: ReactNode }) {
     if (isLoading) return;
 
     if (user) {
-      // Fetch token first, then set auth
-      fetchToken().then((token) => {
-        if (token) {
-          convex.setAuth(fetchToken);
-        }
-        // Wait for Convex to process the auth
-        setTimeout(() => setAuthReady(true), 1000);
-      });
+      convex.setAuth(fetchToken);
+      // Listen for auth state to be ready
+      const checkAuth = async () => {
+        // Give Convex time to process the token
+        await new Promise(r => setTimeout(r, 100));
+        setAuthReady(true);
+      };
+      checkAuth();
     } else {
       convex.clearAuth();
       setAuthReady(true);
     }
   }, [user, isLoading, fetchToken]);
 
-  // Wait for auth to be ready before rendering children
   if (isLoading || (user && !authReady)) {
     return (
       <ConvexProvider client={convex}>

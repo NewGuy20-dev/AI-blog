@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Settings, Shield, Bookmark, ArrowLeft } from "lucide-react";
+import { User, Settings, Shield, ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { UserMenu } from "@/components/ui/UserMenu";
@@ -12,7 +12,6 @@ const navItems = [
   { href: "/profile", label: "Profile", icon: User },
   { href: "/account", label: "Account", icon: Shield },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
 ];
 
 export function SettingsLayout({ children }: { children: ReactNode }) {

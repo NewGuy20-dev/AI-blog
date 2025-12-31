@@ -7,20 +7,35 @@ import { v4 as uuidv4 } from "uuid";
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 async function discoverTrendingTopic(): Promise<string> {
-  // Use Google Search to find trending news
+  // Rotate through different categories for variety
+  const categories = [
+    "trending technology news today",
+    "breaking business finance news",
+    "latest sports news highlights",
+    "entertainment celebrity news today",
+    "health medical breakthrough news",
+    "science discovery news today",
+    "world international news today",
+    "lifestyle travel food trends",
+    "education learning news today",
+    "environmental climate news",
+  ];
+  
+  // Pick random category
+  const query = categories[Math.floor(Math.random() * categories.length)];
+  
   const result = await executeGoogleSearch({ 
     tool: "google_search", 
-    query: "trending news today breaking stories", 
+    query, 
     num: 5 
   });
   
   if (result.success && "data" in result && "results" in result.data) {
     const titles = (result.data as { results: { title: string }[] }).results.map(r => r.title).join(", ");
-    return `Latest trending news: ${titles}`;
+    return `Write about one of these topics: ${titles}`;
   }
   
-  // Fallback topic
-  return "Latest trending technology and world news";
+  return "Latest trending news story";
 }
 
 export async function runGemmaPipeline() {

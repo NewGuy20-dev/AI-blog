@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       userAgent: 'emergency-system',
       eventType: 'emergency_lockdown_activated',
       severity: 'critical',
-      details: { reason, lockdownLevel: 'maximum' },
+      details: { reason },
       timestamp: Date.now(),
       blocked: false,
       action: 'emergency_lockdown'

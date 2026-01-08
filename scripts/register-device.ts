@@ -5,6 +5,22 @@ import * as path from 'path';
 import * as os from 'os';
 import * as readline from 'readline';
 
+// Load .env.local
+const envPath = path.join(process.cwd(), '.env.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const match = line.match(/^([^=:#]+)=(.*)$/);
+    if (match) {
+      const key = match[1].trim();
+      const value = match[2].trim();
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  });
+}
+
 const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
 const SSH_PUBLIC_KEY_PATH = process.env.SSH_PUBLIC_KEY_PATH || path.join(os.homedir(), '.ssh', 'id_rsa.pub');
 

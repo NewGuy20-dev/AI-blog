@@ -14,6 +14,12 @@ export async function securityMiddleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || '';
   const timezone = request.headers.get('x-timezone') || 'UTC';
   
+  // Check emergency lockdown first
+  const lockdown = await checkEmergencyLockdown();
+  if (lockdown?.active) {
+    return new NextResponse('System in Emergency Lockdown', { status: 503 });
+  }
+  
   // Check if IP is blocked
   const isBlocked = await checkBlockedIP(ip);
   if (isBlocked) {
@@ -279,4 +285,21 @@ async function logSecurityEvent(event: any) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(event)
   });
+}
+
+async function checkEmergencyLockdown() {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path: 'security:getEmergencyLockdown',
+        args: {}
+      })
+    });
+    const result = await response.json();
+    return result.value;
+  } catch {
+    return null;
+  }
 }

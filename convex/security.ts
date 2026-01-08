@@ -398,15 +398,36 @@ export const setEmergencyLockdown = mutation({
   args: {
     active: v.boolean(),
     reason: v.string(),
-    timestamp: v.number()
+    activatedBy: v.string()
   },
   handler: async (ctx, args) => {
-    // Store emergency lockdown state
     await ctx.db.insert("emergencyLockdown", {
       active: args.active,
       reason: args.reason,
-      activatedAt: args.timestamp,
-      activatedBy: "system"
+      activatedAt: Date.now(),
+      activatedBy: args.activatedBy
+    });
+  }
+});
+
+export const getEmergencyLockdown = query({
+  args: {},
+  handler: async (ctx) => {
+    const lockdown = await ctx.db
+      .query("emergencyLockdown")
+      .withIndex("by_active", (q) => q.eq("active", true))
+      .order("desc")
+      .first();
+    return lockdown;
+  }
+});
+
+export const deactivateEmergencyLockdown = mutation({
+  args: { lockdownId: v.id("emergencyLockdown") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.lockdownId, {
+      active: false,
+      deactivatedAt: Date.now()
     });
   }
 });

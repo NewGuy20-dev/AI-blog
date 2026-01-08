@@ -22,6 +22,13 @@ interface SecurityStats {
   activeThreats: number;
 }
 
+interface LockdownStatus {
+  active: boolean;
+  reason?: string;
+  activatedAt?: number;
+  activatedBy?: string;
+}
+
 export default function AdminSecurityDashboard() {
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [stats, setStats] = useState<SecurityStats>({
@@ -31,6 +38,8 @@ export default function AdminSecurityDashboard() {
     bannedHardware: 0,
     activeThreats: 0
   });
+  const [lockdownStatus, setLockdownStatus] = useState<LockdownStatus>({ active: false });
+  const [masterKey, setMasterKey] = useState('');
   const [autoRefresh, setAutoRefresh] = useState(true);
 
   useEffect(() => {
@@ -53,19 +62,38 @@ export default function AdminSecurityDashboard() {
       const statsResponse = await fetch('/api/security/stats');
       const statsData = await statsResponse.json();
       setStats(statsData);
+
+      // Load lockdown status
+      const lockdownResponse = await fetch('/api/security/lockdown-status');
+      const lockdownData = await lockdownResponse.json();
+      setLockdownStatus(lockdownData);
     } catch (error) {
       console.error('Failed to load security data:', error);
     }
   };
 
   const handleEmergencyLockdown = async () => {
-    if (confirm('Are you sure you want to activate emergency lockdown? This will block all non-trusted access.')) {
-      await fetch('/api/security/emergency-lockdown', {
+    const key = prompt('Enter master key to activate emergency lockdown:');
+    if (!key) return;
+
+    const reason = prompt('Reason for lockdown:') || 'Manual emergency lockdown';
+    
+    try {
+      const response = await fetch('/api/security/emergency-lockdown', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'Manual emergency lockdown' })
+        body: JSON.stringify({ reason, masterKey: key })
       });
-      loadSecurityData();
+      
+      const result = await response.json();
+      if (result.success) {
+        alert('✅ Emergency lockdown activated!');
+        loadSecurityData();
+      } else {
+        alert('❌ ' + (result.error || 'Failed to activate lockdown'));
+      }
+    } catch (error) {
+      alert('❌ Failed to activate lockdown');
     }
   };
 
@@ -107,12 +135,31 @@ export default function AdminSecurityDashboard() {
           </button>
           <button
             onClick={handleEmergencyLockdown}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className={`px-4 py-2 rounded font-bold ${lockdownStatus.active ? 'bg-red-800 text-white' : 'bg-red-600 text-white hover:bg-red-700'}`}
           >
-            🚨 Emergency Lockdown
+            {lockdownStatus.active ? '🔒 LOCKDOWN ACTIVE' : '🚨 Emergency Lockdown'}
           </button>
         </div>
       </div>
+
+      {/* Lockdown Status Banner */}
+      {lockdownStatus.active && (
+        <Card className="border-red-600 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">🚨</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-red-800">EMERGENCY LOCKDOWN ACTIVE</h2>
+                <p className="text-red-700">Reason: {lockdownStatus.reason}</p>
+                <p className="text-sm text-red-600">
+                  Activated: {lockdownStatus.activatedAt ? new Date(lockdownStatus.activatedAt).toLocaleString() : 'Unknown'}
+                  {' by '}{lockdownStatus.activatedBy || 'system'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Security Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

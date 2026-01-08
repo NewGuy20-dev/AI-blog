@@ -10,13 +10,35 @@ export async function POST(request: NextRequest) {
     const { reason, masterKey } = await request.json();
     
     // Validate master key
-    const keyDoc = await convex.query(api.admin.getMasterKey, {});
-    if (!keyDoc || keyDoc !== masterKey) {
+    const storedKey = await convex.query(api.admin.getMasterKey, {});
+    if (!storedKey || storedKey !== masterKey) {
       return NextResponse.json({ error: 'Invalid master key' }, { status: 403 });
     }
     
-    // Activate emergency lockdown
-    await activateEmergencyLockdown(reason || 'Manual emergency lockdown');
+    // Activate emergency lockdown in DB
+    await convex.mutation(api.security.setEmergencyLockdown, {
+      active: true,
+      reason: reason || 'Manual emergency lockdown',
+      activatedBy: 'admin'
+    });
+    
+    // Blacklist all non-admin tokens
+    await convex.mutation(api.security.blacklistAllNonAdminTokens, {
+      reason: `Emergency lockdown: ${reason}`
+    });
+    
+    // Log critical event
+    await convex.mutation(api.security.logSecurityEvent, {
+      userId: 'system',
+      ip: 'system',
+      userAgent: 'emergency-system',
+      eventType: 'emergency_lockdown_activated',
+      severity: 'critical',
+      details: { reason, lockdownLevel: 'maximum' },
+      timestamp: Date.now(),
+      blocked: false,
+      action: 'emergency_lockdown'
+    });
     
     // Send critical Discord alert
     await sendEmergencyAlert(reason);
@@ -27,6 +49,7 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
+    console.error('Emergency lockdown error:', error);
     return NextResponse.json({ error: 'Emergency lockdown failed' }, { status: 500 });
   }
 }

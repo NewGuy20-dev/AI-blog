@@ -432,6 +432,60 @@ export const deactivateEmergencyLockdown = mutation({
   }
 });
 
+// AUTHORIZED DEVICES FOR SSH KEY AUTH
+export const addAuthorizedDevice = mutation({
+  args: {
+    name: v.string(),
+    publicKey: v.string(),
+    keyType: v.string(),
+    fingerprint: v.string(),
+    addedBy: v.string()
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("authorizedDevices", {
+      ...args,
+      addedAt: Date.now()
+    });
+  }
+});
+
+export const getAuthorizedDevice = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("authorizedDevices").first();
+  }
+});
+
+export const storeLockdownChallenge = mutation({
+  args: { challenge: v.string() },
+  handler: async (ctx, args) => {
+    const expiresAt = Date.now() + (5 * 60 * 1000); // 5 minutes
+    await ctx.db.insert("lockdownChallenges", {
+      challenge: args.challenge,
+      createdAt: Date.now(),
+      expiresAt,
+      used: false
+    });
+  }
+});
+
+export const getLockdownChallenge = query({
+  args: { challenge: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("lockdownChallenges")
+      .withIndex("by_challenge", (q) => q.eq("challenge", args.challenge))
+      .first();
+  }
+});
+
+export const markChallengeUsed = mutation({
+  args: { challengeId: v.id("lockdownChallenges") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.challengeId, { used: true });
+  }
+});
+
 export const blacklistAllNonAdminTokens = mutation({
   args: { reason: v.string() },
   handler: async (ctx, args) => {

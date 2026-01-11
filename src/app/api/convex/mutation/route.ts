@@ -26,7 +26,7 @@ enum ErrorCode {
 // Zod schema for mutation request
 const mutationRequestSchema = z.object({
   function: z.string().min(1).max(100),
-  args: z.record(z.any()),
+  args: z.record(z.string(), z.any()),
 });
 
 export async function POST(request: NextRequest) {

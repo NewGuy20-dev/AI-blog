@@ -9,7 +9,20 @@ interface SecurityContext {
   riskScore: number;
 }
 
+// Get base URL for internal API calls
+function getBaseUrl(request: NextRequest): string {
+  return request.nextUrl.origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+}
+
+// Module-level base URL (set on first request)
+let cachedBaseUrl: string | null = null;
+
 export async function securityMiddleware(request: NextRequest) {
+  // Cache base URL from first request
+  if (!cachedBaseUrl) {
+    cachedBaseUrl = getBaseUrl(request);
+  }
+
   const ip = getClientIP(request);
   const userAgent = request.headers.get('user-agent') || '';
   const timezone = request.headers.get('x-timezone') || 'UTC';
@@ -51,13 +64,19 @@ export async function securityMiddleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+// Build absolute URL for internal API calls
+function apiUrl(path: string): string {
+  const base = cachedBaseUrl || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  return `${base}${path}`;
+}
+
 async function validateJWT(token: string): Promise<boolean> {
   try {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
     
     // Check if token is blacklisted
-    const isBlacklisted = await fetch('/api/security/check-token', {
+    const isBlacklisted = await fetch(apiUrl('/api/security/check-token'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jti: payload.jti })
@@ -70,7 +89,7 @@ async function validateJWT(token: string): Promise<boolean> {
 }
 
 async function checkBlockedIP(ip: string): Promise<boolean> {
-  const response = await fetchWithTimeout('/api/security/check-ip', {
+  const response = await fetchWithTimeout(apiUrl('/api/security/check-ip'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ip })
@@ -138,7 +157,7 @@ async function performSecurityCheck(context: SecurityContext): Promise<{ blocked
 }
 
 async function checkHardwareBan(fingerprint: string): Promise<boolean> {
-  const response = await fetchWithTimeout('/api/security/check-hardware-ban', {
+  const response = await fetchWithTimeout(apiUrl('/api/security/check-hardware-ban'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fingerprint })
@@ -308,7 +327,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 2
 
 async function logSecurityEvent(event: any) {
   // Fire-and-forget, don't block on logging
-  fetchWithTimeout('/api/security/log-event', {
+  fetchWithTimeout(apiUrl('/api/security/log-event'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(event)

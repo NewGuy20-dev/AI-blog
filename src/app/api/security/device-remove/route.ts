@@ -44,9 +44,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid master key' }, { status: 403 });
     }
 
-    // Both validations passed - mark challenge used and remove device
-    await convex.mutation(api.security.markChallengeUsed, { challengeId: challengeDoc._id });
-    await convex.mutation(api.security.removeAuthorizedDevice, { deviceId: device._id });
+    // Both validations passed - atomic challenge + device removal
+    await convex.mutation(api.security.removeDeviceWithChallenge, {
+      challengeId: challengeDoc._id,
+      deviceId: device._id
+    });
 
     return NextResponse.json({ success: true, message: 'Device removed' });
   } catch (error) {

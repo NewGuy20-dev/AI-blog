@@ -450,8 +450,15 @@ export const addAuthorizedDevice = mutation({
 });
 
 export const getAuthorizedDevice = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { fingerprint: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (args.fingerprint) {
+      return await ctx.db
+        .query("authorizedDevices")
+        .withIndex("by_fingerprint", (q) => q.eq("fingerprint", args.fingerprint as string))
+        .first();
+    }
+    // Fallback: return first device (for single-device mode)
     return await ctx.db.query("authorizedDevices").first();
   }
 });
@@ -821,5 +828,18 @@ export const cleanupExpiredChallenges = internalMutation({
       }
     }
     return { deleted };
+  }
+});
+
+
+// Atomic device removal with challenge consumption
+export const removeDeviceWithChallenge = mutation({
+  args: {
+    challengeId: v.id("lockdownChallenges"),
+    deviceId: v.id("authorizedDevices")
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.challengeId, { used: true });
+    await ctx.db.delete(args.deviceId);
   }
 });

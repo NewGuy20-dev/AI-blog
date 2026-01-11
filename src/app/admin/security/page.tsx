@@ -60,22 +60,36 @@ export default function AdminSecurityDashboard() {
   const loadSecurityData = async () => {
     try {
       const eventsResponse = await fetch('/api/security/events');
-      const eventsData = await eventsResponse.json();
-      setEvents(eventsData.events || []);
+      if (eventsResponse.ok) {
+        const eventsData = await eventsResponse.json();
+        setEvents(eventsData.events || []);
+      }
 
       const statsResponse = await fetch('/api/security/stats');
-      const statsData = await statsResponse.json();
-      setStats(statsData);
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json();
+        setStats(statsData);
+      }
 
       const lockdownResponse = await fetch('/api/security/lockdown-status');
-      const lockdownData = await lockdownResponse.json();
-      setLockdownStatus(lockdownData);
+      if (lockdownResponse.ok) {
+        const lockdownData = await lockdownResponse.json();
+        setLockdownStatus(lockdownData);
+      } else {
+        setLockdownStatus({ active: false });
+      }
 
       const deviceResponse = await fetch('/api/security/authorized-device');
-      const deviceData = await deviceResponse.json();
-      setAuthorizedDevice(deviceData.device || null);
+      if (deviceResponse.ok) {
+        const deviceData = await deviceResponse.json();
+        setAuthorizedDevice(deviceData.device || null);
+      } else {
+        setAuthorizedDevice(null);
+      }
     } catch (error) {
       console.error('Failed to load security data:', error);
+      setLockdownStatus({ active: false });
+      setAuthorizedDevice(null);
     }
   };
 

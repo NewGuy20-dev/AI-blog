@@ -17,14 +17,8 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL;
 const API_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const SSH_PRIVATE_KEY_PATH = process.env.SSH_PRIVATE_KEY_PATH || path.join(os.homedir(), '.ssh', 'id_rsa');
-
-if (!CONVEX_URL) {
-  console.error('❌ NEXT_PUBLIC_CONVEX_URL is not set');
-  process.exit(1);
-}
 
 function prompt(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });

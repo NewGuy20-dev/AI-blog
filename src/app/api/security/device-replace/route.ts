@@ -7,16 +7,25 @@ const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
-    const { challenge, signature, newDevice } = await request.json();
+    const body = await request.json();
+    const { challenge, signature, newDevice } = body;
 
     if (!challenge || !signature || !newDevice) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Get challenge from DB
-    const challengeDoc = await convex.query(api.security.getLockdownChallenge, { challenge });
-    if (!challengeDoc || challengeDoc.used || Date.now() > challengeDoc.expiresAt) {
-      return NextResponse.json({ error: 'Invalid or expired challenge' }, { status: 403 });
+    // Validate newDevice fields
+    if (!newDevice.name || typeof newDevice.name !== 'string' || !newDevice.name.trim()) {
+      return NextResponse.json({ error: 'Invalid device name' }, { status: 400 });
+    }
+    if (!newDevice.publicKey || typeof newDevice.publicKey !== 'string') {
+      return NextResponse.json({ error: 'Invalid public key' }, { status: 400 });
+    }
+    if (!newDevice.keyType || !['rsa', 'dsa', 'ecdsa', 'ed25519'].includes(newDevice.keyType)) {
+      return NextResponse.json({ error: 'Invalid key type' }, { status: 400 });
+    }
+    if (!newDevice.fingerprint || typeof newDevice.fingerprint !== 'string') {
+      return NextResponse.json({ error: 'Invalid fingerprint' }, { status: 400 });
     }
 
     // Get existing device
@@ -38,13 +47,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 403 });
     }
 
-    // Mark challenge as used
-    await convex.mutation(api.security.markChallengeUsed, { challengeId: challengeDoc._id });
+    // Atomic challenge validation (same as lockdown-toggle)
+    const challengeResult = await convex.mutation(api.security.useAndValidateChallenge, { challenge });
+    if (!challengeResult.valid) {
+      return NextResponse.json({ error: challengeResult.error || 'Invalid or expired challenge' }, { status: 403 });
+    }
 
     // Replace device
     await convex.mutation(api.security.replaceAuthorizedDevice, {
       oldDeviceId: existingDevice._id,
-      name: newDevice.name,
+      name: newDevice.name.trim(),
       publicKey: newDevice.publicKey,
       keyType: newDevice.keyType,
       fingerprint: newDevice.fingerprint

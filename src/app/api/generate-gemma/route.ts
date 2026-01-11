@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { 
           error: "Invalid topic", 
-          details: validation.error.errors.map(e => e.message),
+          details: validation.error.issues.map(e => e.message),
           quota: getQuotaStatus() 
         },
         { status: 400 }

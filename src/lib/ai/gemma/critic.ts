@@ -139,7 +139,7 @@ Review this article. Use fact_check or verify_source tools if you need to verify
       
       if (!jsonStr) {
         // If no JSON found, return empty issues (pass)
-        console.log("Warning: No JSON in critic response, assuming pass");
+      console.error("Warning: No JSON in critic response, assuming pass");
         return {
           issues: [],
           decision: "publish" as const,

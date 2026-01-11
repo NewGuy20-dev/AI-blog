@@ -21,16 +21,22 @@ export function useReadingTracker(slug: string, readingTimeMinutes: number | und
     if (read.includes(slug)) return;
 
     const thresholdMs = (readingTimeMinutes * 60 * 1000) / 4;
-    console.log(`[ReadingTracker] Starting timer for ${slug}: ${thresholdMs}ms (${readingTimeMinutes} min read)`);
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[ReadingTracker] Starting timer for ${slug}: ${thresholdMs}ms (${readingTimeMinutes} min read)`);
+    }
 
     const timer = setTimeout(async () => {
       if (triggered.current) return;
       triggered.current = true;
-      console.log(`[ReadingTracker] Timer fired for ${slug}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[ReadingTracker] Timer fired for ${slug}`);
+      }
 
       try {
         const result = await markRead({ postSlug: slug });
-        console.log(`[ReadingTracker] Result:`, result);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[ReadingTracker] Result:`, result);
+        }
         if (!result.alreadyRead && !result.notAuthenticated) {
           const updated = [...read, slug];
           localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));

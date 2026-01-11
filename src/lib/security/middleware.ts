@@ -287,14 +287,17 @@ async function logSecurityEvent(event: any) {
   });
 }
 
-async function checkEmergencyLockdown() {
+async function checkEmergencyLockdown(userId?: string) {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/query`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(userId && { 'X-User-ID': userId })
+      },
       body: JSON.stringify({
         path: 'security:getEmergencyLockdown',
-        args: {}
+        args: { userId }
       })
     });
     const result = await response.json();

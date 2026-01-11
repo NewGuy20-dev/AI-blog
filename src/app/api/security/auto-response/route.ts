@@ -128,10 +128,8 @@ async function applyDynamicRateLimit(ip: string, level: string) {
   };
   
   // Implementation would store rate limits in Redis/database
-  console.log(`Applied ${level} rate limit to ${ip}:`, limits[level as keyof typeof limits]);
 }
 
 async function triggerSecurityChallenge(userId: string, ip: string, type: string) {
   // Store challenge requirement in database
-  console.log(`Triggered ${type} challenge for user ${userId} from ${ip}`);
 }

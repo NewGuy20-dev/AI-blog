@@ -10,18 +10,20 @@ if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
   envContent.split('\n').forEach(line => {
     const match = line.match(/^([^=:#]+)=(.*)$/);
-    if (match) {
-      const key = match[1].trim();
-      const value = match[2].trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
+    if (match && !process.env[match[1].trim()]) {
+      process.env[match[1].trim()] = match[2].trim();
     }
   });
 }
 
+// Environment validation
 const API_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 const SSH_KEY_PATH = process.env.SSH_PRIVATE_KEY_PATH || path.join(os.homedir(), '.ssh', 'id_rsa');
+
+if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+  console.error('❌ NEXT_PUBLIC_CONVEX_URL is not set');
+  process.exit(1);
+}
 
 async function toggleLockdown(action: 'on' | 'off') {
   try {

@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // JWT Blacklisting
@@ -752,3 +752,74 @@ function calculateRiskScore(isVpn: boolean, isProxy: boolean, isDatacenter: bool
   if (isDatacenter) score += 25;
   return Math.min(score, 100);
 }
+
+
+// Replace authorized device (requires verification of existing device first)
+export const replaceAuthorizedDevice = mutation({
+  args: {
+    oldDeviceId: v.id("authorizedDevices"),
+    name: v.string(),
+    publicKey: v.string(),
+    keyType: v.string(),
+    fingerprint: v.string()
+  },
+  handler: async (ctx, args) => {
+    // Delete old device
+    await ctx.db.delete(args.oldDeviceId);
+    // Insert new device
+    await ctx.db.insert("authorizedDevices", {
+      name: args.name,
+      publicKey: args.publicKey,
+      keyType: args.keyType,
+      fingerprint: args.fingerprint,
+      addedBy: 'device-replacement',
+      addedAt: Date.now()
+    });
+  }
+});
+
+// Remove authorized device (called after dual auth verification)
+export const removeAuthorizedDevice = mutation({
+  args: { deviceId: v.id("authorizedDevices") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.deviceId);
+  }
+});
+
+
+// Atomic challenge validation - checks and marks used in one transaction
+export const useAndValidateChallenge = mutation({
+  args: { challenge: v.string() },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db
+      .query("lockdownChallenges")
+      .withIndex("by_challenge", (q) => q.eq("challenge", args.challenge))
+      .first();
+    
+    if (!doc) return { valid: false, error: 'Challenge not found' };
+    if (doc.used) return { valid: false, error: 'Challenge already used' };
+    if (Date.now() > doc.expiresAt) return { valid: false, error: 'Challenge expired' };
+    
+    // Mark as used atomically
+    await ctx.db.patch(doc._id, { used: true });
+    return { valid: true };
+  }
+});
+
+
+// Cleanup expired challenges (called by cron)
+export const cleanupExpiredChallenges = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const challenges = await ctx.db.query("lockdownChallenges").collect();
+    let deleted = 0;
+    for (const c of challenges) {
+      if (c.used || c.expiresAt < now) {
+        await ctx.db.delete(c._id);
+        deleted++;
+      }
+    }
+    return { deleted };
+  }
+});

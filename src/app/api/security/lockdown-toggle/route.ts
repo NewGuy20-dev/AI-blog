@@ -13,47 +13,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Get challenge from DB
-    const challengeDoc = await convex.query(api.security.getLockdownChallenge, { challenge });
-    
-    if (!challengeDoc) {
-      return NextResponse.json({ error: 'Invalid challenge' }, { status: 403 });
-    }
-
-    if (challengeDoc.used) {
-      return NextResponse.json({ error: 'Challenge already used' }, { status: 403 });
-    }
-
-    if (Date.now() > challengeDoc.expiresAt) {
-      return NextResponse.json({ error: 'Challenge expired' }, { status: 403 });
+    if (action !== 'on' && action !== 'off') {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
     // Get authorized device public key
     const device = await convex.query(api.security.getAuthorizedDevice, {});
-    
     if (!device) {
       return NextResponse.json({ error: 'No authorized device found' }, { status: 403 });
     }
 
-    // Verify signature
+    // Verify signature first (before consuming challenge)
     try {
       const publicKey = sshpk.parseKey(device.publicKey, 'ssh');
       const verifier = publicKey.createVerify('sha256');
       verifier.update(Buffer.from(challenge));
-      
-      const sig = sshpk.parseSignature(signature, publicKey.type, 'ssh');
-      const valid = verifier.verify(sig);
-      
-      if (!valid) {
+      const sig = sshpk.parseSignature(signature, publicKey.type as 'rsa' | 'dsa' | 'ecdsa' | 'ed25519', 'ssh');
+      if (!verifier.verify(sig)) {
         return NextResponse.json({ error: 'Invalid signature' }, { status: 403 });
       }
-    } catch (error) {
-      console.error('Signature verification error:', error);
+    } catch {
       return NextResponse.json({ error: 'Signature verification failed' }, { status: 403 });
     }
 
-    // Mark challenge as used
-    await convex.mutation(api.security.markChallengeUsed, { challengeId: challengeDoc._id });
+    // Atomic challenge validation and consumption
+    const challengeResult = await convex.mutation(api.security.useAndValidateChallenge, { challenge });
+    if (!challengeResult.valid) {
+      return NextResponse.json({ error: challengeResult.error }, { status: 403 });
+    }
 
     // Toggle lockdown
     if (action === 'on') {
@@ -62,13 +49,11 @@ export async function POST(request: NextRequest) {
         reason: 'SSH key authenticated toggle',
         activatedBy: device.name
       });
-    } else if (action === 'off') {
+    } else {
       const lockdown = await convex.query(api.security.getEmergencyLockdown, {});
       if (lockdown) {
         await convex.mutation(api.security.deactivateEmergencyLockdown, { lockdownId: lockdown._id });
       }
-    } else {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
     return NextResponse.json({ 

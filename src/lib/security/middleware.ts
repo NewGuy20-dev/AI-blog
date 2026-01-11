@@ -70,15 +70,19 @@ async function validateJWT(token: string): Promise<boolean> {
 }
 
 async function checkBlockedIP(ip: string): Promise<boolean> {
-  // Check against Convex blockedIps table
-  const response = await fetch('/api/security/check-ip', {
+  const response = await fetchWithTimeout('/api/security/check-ip', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ip })
   });
   
-  const result = await response.json();
-  return result.blocked;
+  if (!response) return false; // Fail-open on timeout
+  try {
+    const result = await response.json();
+    return result.blocked;
+  } catch {
+    return false;
+  }
 }
 
 async function performSecurityCheck(context: SecurityContext): Promise<{ blocked: boolean; riskScore: number }> {
@@ -134,14 +138,19 @@ async function performSecurityCheck(context: SecurityContext): Promise<{ blocked
 }
 
 async function checkHardwareBan(fingerprint: string): Promise<boolean> {
-  const response = await fetch('/api/security/check-hardware-ban', {
+  const response = await fetchWithTimeout('/api/security/check-hardware-ban', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fingerprint })
   });
   
-  const result = await response.json();
-  return result.banned;
+  if (!response) return false; // Fail-open on timeout
+  try {
+    const result = await response.json();
+    return result.banned;
+  } catch {
+    return false;
+  }
 }
 
 async function detectAdvancedVPN(ip: string): Promise<{ detected: boolean; confidence: number }> {
@@ -195,6 +204,10 @@ interface IPApiResponse {
 }
 
 let ipApiCache: Map<string, { data: IPApiResponse; expires: number }> = new Map();
+
+// Lockdown status cache (30s TTL)
+let lockdownCache: { active: boolean; data: any; expires: number } | null = null;
+const LOCKDOWN_CACHE_TTL = 30 * 1000; // 30 seconds
 
 async function getIPApiData(ip: string): Promise<IPApiResponse | null> {
   // Skip localhost
@@ -279,29 +292,58 @@ function getClientIP(request: NextRequest): string {
          '127.0.0.1';
 }
 
+// Helper for fetch with timeout (fail-open on timeout/error)
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 2000): Promise<Response | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } catch {
+    return null; // Fail-open
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function logSecurityEvent(event: any) {
-  await fetch('/api/security/log-event', {
+  // Fire-and-forget, don't block on logging
+  fetchWithTimeout('/api/security/log-event', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(event)
-  });
+  }, 1000);
 }
 
-async function checkEmergencyLockdown(userId?: string) {
+async function checkEmergencyLockdown() {
+  // Check cache first
+  if (lockdownCache && lockdownCache.expires > Date.now()) {
+    return lockdownCache.data;
+  }
+
+  const response = await fetchWithTimeout(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      path: 'security:getEmergencyLockdown',
+      args: {}
+    })
+  });
+
+  if (!response) return null; // Fail-open on timeout/error
+
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/query`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(userId && { 'X-User-ID': userId })
-      },
-      body: JSON.stringify({
-        path: 'security:getEmergencyLockdown',
-        args: { userId }
-      })
-    });
     const result = await response.json();
-    return result.value;
+    const data = result.value;
+    
+    // Cache the result
+    lockdownCache = {
+      active: data?.active || false,
+      data,
+      expires: Date.now() + LOCKDOWN_CACHE_TTL
+    };
+    
+    return data;
   } catch {
     return null;
   }

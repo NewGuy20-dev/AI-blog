@@ -7,9 +7,16 @@ export const maxDuration = 60;
 function checkAuth(req: Request): boolean {
   const authHeader = req.headers.get("authorization");
   const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!authHeader || authHeader.length !== expected.length) return false;
+  
+  // Pad to fixed length to prevent timing attacks
+  const paddedAuth = (authHeader || '').padEnd(200, '\0');
+  const paddedExpected = expected.padEnd(200, '\0');
+  
   try {
-    return timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
+    return timingSafeEqual(
+      Buffer.from(paddedAuth),
+      Buffer.from(paddedExpected)
+    );
   } catch {
     return false;
   }

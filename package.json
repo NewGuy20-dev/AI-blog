@@ -11,7 +11,14 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test-cron": "npx tsx scripts/test-cron.ts"
+    "test": "vitest",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "test:security": "npm run test:unit && npm run test:e2e",
+    "test-cron": "npx tsx scripts/test-cron.ts",
+    "lockdown:toggle": "npx tsx scripts/lockdown-toggle.ts",
+    "lockdown:register": "npx tsx scripts/register-device.ts",
+    "lockdown:remove": "npx tsx scripts/remove-device.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^2.0.44",
@@ -31,9 +38,11 @@
     "react-dom": "^19.2.3",
     "sharp": "^0.34.5",
     "sonner": "^2.0.7",
+    "sshpk": "^1.18.0",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^13.0.0",
+    "vercel": "^50.1.6",
     "zod": "^4.1.13"
   },
   "devDependencies": {
@@ -42,10 +51,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sshpk": "^1.17.4",
+    "@vitest/ui": "^4.0.16",
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.0.5",
+    "happy-dom": "^20.1.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.16"
   }
 }

@@ -2,15 +2,35 @@ import { NextResponse } from "next/server";
 import { generateBlogWithTools } from "@/lib/ai/gemma/generator";
 import { trackApiCall, logGeneration, getQuotaStatus } from "@/lib/ai/gemma/monitoring";
 import { timingSafeEqual } from "crypto";
+import { z } from "zod";
 
 export const maxDuration = 60;
+
+// Zod schema for topic validation
+const topicSchema = z.object({
+  topic: z.string()
+    .min(3, "Topic must be at least 3 characters")
+    .max(200, "Topic must not exceed 200 characters")
+    .regex(/^[a-zA-Z0-9\s\-.,!?'"]+$/, "Topic contains invalid characters")
+    .refine(
+      (val) => !/(script|javascript|eval|exec|system|cmd)/i.test(val),
+      "Topic contains potentially malicious content"
+    ),
+});
 
 function checkAuth(req: Request): boolean {
   const authHeader = req.headers.get("authorization");
   const expected = `Bearer ${process.env.CRON_SECRET}`;
-  if (!authHeader || authHeader.length !== expected.length) return false;
+  
+  // Pad to fixed length to prevent timing attacks
+  const paddedAuth = (authHeader || '').padEnd(200, '\0');
+  const paddedExpected = expected.padEnd(200, '\0');
+  
   try {
-    return timingSafeEqual(Buffer.from(authHeader), Buffer.from(expected));
+    return timingSafeEqual(
+      Buffer.from(paddedAuth),
+      Buffer.from(paddedExpected)
+    );
   } catch {
     return false;
   }
@@ -27,10 +47,22 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { topic } = await req.json();
-    if (!topic) {
-      return NextResponse.json({ error: "Topic required" }, { status: 400 });
+    const body = await req.json();
+    
+    // Validate input with Zod
+    const validation = topicSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { 
+          error: "Invalid topic", 
+          details: validation.error.issues.map(e => e.message),
+          quota: getQuotaStatus() 
+        },
+        { status: 400 }
+      );
     }
+
+    const { topic } = validation.data;
 
     const result = await generateBlogWithTools(topic);
     logGeneration(topic, result.metrics, true);

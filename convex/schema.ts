@@ -260,4 +260,20 @@ export default defineSchema({
     discordUserId: v.string(),
     timestamps: v.array(v.number()),
   }).index("by_discordUserId", ["discordUserId"]),
+
+  authorizedDevices: defineTable({
+    name: v.string(),
+    publicKey: v.string(),
+    keyType: v.string(),
+    fingerprint: v.string(),
+    addedBy: v.string(),
+    addedAt: v.number(),
+  }).index("by_fingerprint", ["fingerprint"]),
+
+  lockdownChallenges: defineTable({
+    challenge: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    used: v.boolean(),
+  }).index("by_challenge", ["challenge"]),
 });

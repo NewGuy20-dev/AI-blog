@@ -19,15 +19,12 @@ export async function POST(request: NextRequest) {
 
 async function clearRateLimitCache() {
   // Clear rate limiting data
-  console.log('Cleared rate limit cache');
 }
 
 async function clearFingerprintCache() {
   // Clear fingerprint analysis cache
-  console.log('Cleared fingerprint cache');
 }
 
 async function clearIPReputationCache() {
   // Clear IP reputation cache
-  console.log('Cleared IP reputation cache');
 }

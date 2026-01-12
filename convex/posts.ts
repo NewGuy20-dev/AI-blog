@@ -211,3 +211,20 @@ export const archiveOld = mutation({
     return { archived: toArchive.length };
   },
 });
+
+export const cleanupInvalidImages = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("posts").collect();
+    let cleaned = 0;
+    
+    for (const post of posts) {
+      if (post.featuredImage?.url.includes("example.com")) {
+        await ctx.db.patch(post._id, { featuredImage: undefined });
+        cleaned++;
+      }
+    }
+    
+    return { cleaned, total: posts.length };
+  },
+});

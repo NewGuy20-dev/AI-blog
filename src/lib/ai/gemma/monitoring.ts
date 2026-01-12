@@ -35,12 +35,14 @@ export function getQuotaStatus() {
 }
 
 export function logGeneration(topic: string, metrics: GenerationMetrics, success: boolean) {
-  console.log(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    event: "blog_generation",
-    topic,
-    success,
-    ...metrics,
-    quota: getQuotaStatus(),
-  }));
+  if (process.env.NODE_ENV === 'development') {
+    console.log(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      event: "blog_generation",
+      topic,
+      success,
+      ...metrics,
+      quota: getQuotaStatus(),
+    }));
+  }
 }

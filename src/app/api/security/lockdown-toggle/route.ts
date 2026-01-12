@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     // Verify signature first (before consuming challenge)
     try {
       const publicKey = sshpk.parseKey(device.publicKey, 'ssh');
-      const verifier = publicKey.createVerify('sha256');
+      const hashAlg = publicKey.type === 'ed25519' ? 'sha512' : 'sha256';
+      const verifier = publicKey.createVerify(hashAlg);
       verifier.update(Buffer.from(challenge));
       const sig = sshpk.parseSignature(signature, publicKey.type as 'rsa' | 'dsa' | 'ecdsa' | 'ed25519', 'ssh');
       if (!verifier.verify(sig)) {

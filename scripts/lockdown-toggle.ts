@@ -56,7 +56,8 @@ async function toggleLockdown(action: 'on' | 'off') {
 
     // Sign challenge
     console.log('✍️  Signing challenge...');
-    const signer = privateKey.createSign('sha256');
+    const hashAlg = privateKey.type === 'ed25519' ? 'sha512' : 'sha256';
+    const signer = privateKey.createSign(hashAlg);
     signer.update(Buffer.from(challenge));
     const signature = signer.sign();
     const signatureBase64 = signature.toBuffer('ssh').toString('base64');

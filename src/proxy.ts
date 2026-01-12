@@ -13,8 +13,8 @@ async function checkLockdown(url: URL): Promise<Response | null> {
   if (lockdownCache && lockdownCache.expires > Date.now()) {
     if (lockdownCache.active) {
       return new Response(
-        '<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui"><div style="text-align:center"><h1>🔒 Emergency Lockdown</h1><p>System is temporarily unavailable</p></div></body></html>',
-        { status: 503, headers: { 'Content-Type': 'text/html' } }
+        '<html><head><meta charset="utf-8"></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui"><div style="text-align:center"><h1>🔒 Emergency Lockdown</h1><p>System is temporarily unavailable</p></div></body></html>',
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
       );
     }
     return null;
@@ -41,8 +41,8 @@ async function checkLockdown(url: URL): Promise<Response | null> {
 
     if (lockdown?.active) {
       return new Response(
-        '<html><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui"><div style="text-align:center"><h1>🔒 Emergency Lockdown</h1><p>System is temporarily unavailable</p></div></body></html>',
-        { status: 503, headers: { 'Content-Type': 'text/html' } }
+        '<html><head><meta charset="utf-8"></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;font-family:system-ui"><div style="text-align:center"><h1>🔒 Emergency Lockdown</h1><p>System is temporarily unavailable</p></div></body></html>',
+        { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
       );
     }
   } catch {
